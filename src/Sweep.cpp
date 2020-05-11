@@ -263,7 +263,7 @@ void TravelDepartSweep(double t)
 	}
 }
 
-void InfectSweep(double t, int run) //added run number as argument in order to record it in event log
+void InfectSweep(double t, int run, bitmap_state const* state) //added run number as argument in order to record it in event log
 {
 	//// This function loops over infected people, and decides whom to infect. Structure is 1) #pragma loop over all cells then 1a) infectious people, which chooses who they will infect, adds them to a queue
 	//// Next 2) #pragma loop infects those people from queue (using DoInfect function). This is to avoid race conditions.
@@ -707,16 +707,16 @@ void InfectSweep(double t, int run) //added run number as argument in order to r
 				Hosts[infectee].infector = infector;
 				Hosts[infectee].infect_type = infect_type;
 				if (infect_type == -1) //// i.e. if host doesn't have an infector
-					DoFalseCase(infectee, t, ts, j);
+					DoFalseCase(infectee, t, ts, j, state);
 				else
-					DoInfect(infectee, t, j, run);
+					DoInfect(infectee, t, j, run, state);
 			}
 			StateT[k].n_queue[j] = 0;
 		}
 	}
 }
 
-void IncubRecoverySweep(double t, int run)
+void IncubRecoverySweep(double t, int run, bitmap_state const* state)
 {
 	int i, j, k, l, b, tn, ci;
 	double ht;
@@ -776,7 +776,7 @@ void IncubRecoverySweep(double t, int run)
 				/* Following line not 100% consistent with DoIncub. All severity time points (e.g. SARI time) are added to latent_time, not latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep))*/
 				tc = si->latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep)); //// time that person si/ci becomes case (symptomatic)...
 				if ((P.DoSymptoms) && (ts == tc)) //// ... if now is that time...
-					DoCase(ci, t, ts, tn);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
+					DoCase(ci, t, ts, tn, state);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
 
 				if (P.DoSeverity)
 				{
@@ -797,15 +797,15 @@ void IncubRecoverySweep(double t, int run)
 				{
 					if (!si->to_die) //// if person si recovers and this timestep is after they've recovered
 					{
-						DoRecover(ci, tn, run);
+						DoRecover(ci, tn, run, state);
 						//StateT[tn].inf_queue[0][StateT[tn].n_queue[0]++] = ci; //// add them to end of 0th thread of inf queue. Don't get why 0 here.
 					}
 					else /// if they die and this timestep is after they've died.
 					{
 						if (HOST_TREATED(ci) && (ranf_mt(tn) < P.TreatDeathDrop))
-							DoRecover(ci, tn, run);
+							DoRecover(ci, tn, run, state);
 						else
-							DoDeath(ci, tn, run);
+							DoDeath(ci, tn, run, state);
 					}
 
 					//once host recovers, will no longer make contacts for contact tracing - if we are doing contact tracing and case was infectious when contact tracing was active, increment state vector
@@ -821,7 +821,7 @@ void IncubRecoverySweep(double t, int run)
 }
 
 
-void DigitalContactTracingSweep(double t)
+void DigitalContactTracingSweep(double t, bitmap_state const* state)
 {
 	/**
 	 * Function: DigitalContactTracingSweep
@@ -1095,7 +1095,7 @@ void DigitalContactTracingSweep(double t)
 									//if they are asymptomatic, i.e. specifically if they have inf flag 2, call DoDetectedCase in order to trigger HQ and PC too.
 									if (Hosts[contact].inf == 2)
 									{
-										DoDetectedCase(contact, t, ts, tn);
+										DoDetectedCase(contact, t, ts, tn, state);
 										Hosts[contact].detected = 1; Hosts[contact].detected_time = ts;
 									}
 								}
@@ -1125,7 +1125,7 @@ void DigitalContactTracingSweep(double t)
 							//if they are asymptomatic, i.e. specifically if they have inf flag 2, call DoDetectedCase in order to trigger HQ and PC too.
 							if (Hosts[contact].inf == 2)
 							{
-								DoDetectedCase(contact, t, ts, tn);
+								DoDetectedCase(contact, t, ts, tn, state);
 								Hosts[contact].detected = 1; Hosts[contact].detected_time = ts;
 							}
 						}
@@ -1161,7 +1161,7 @@ void DigitalContactTracingSweep(double t)
 }
 
 
-int TreatSweep(double t)
+int TreatSweep(double t, bitmap_state const* state)
 {
 	///// function loops over microcells to decide which cells are treated (either with treatment, vaccine, social distancing, movement restrictions etc.)
 
@@ -1223,7 +1223,7 @@ int TreatSweep(double t)
 														else
 							*/
 							if ((!HOST_TO_BE_TREATED(Places[j][l].members[m])) && ((P.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < P.TreatPlaceTotalProp[j])))
-								DoProph(Places[j][l].members[m], ts, i);
+								DoProph(Places[j][l].members[m], ts, i, state);
 						}
 					}
 					else
@@ -1236,7 +1236,7 @@ int TreatSweep(double t)
 								if (!HOST_TO_BE_TREATED(Places[j][l].members[m]))
 								{
 									if ((P.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < P.TreatPlaceTotalProp[j]))
-										DoProph(Places[j][l].members[m], ts, i);
+										DoProph(Places[j][l].members[m], ts, i, state);
 								}
 						}
 						Places[j][l].treat = 0;
@@ -1254,7 +1254,7 @@ int TreatSweep(double t)
 			if (m > State.n_mvacc) m = State.n_mvacc;
 #pragma omp parallel for private(i) schedule(static,1000)
 			for (i = State.mvacc_cum; i < m; i++)
-				DoVacc(State.mvacc_queue[i], ts);
+				DoVacc(State.mvacc_queue[i], ts, state);
 			State.mvacc_cum = m;
 		}
 	if ((t >= P.TreatTimeStart) || (t >= P.VaccTimeStartGeo) || (t >= P.PlaceCloseTimeStart) || (t >= P.MoveRestrTimeStart) || (t >= P.SocDistTimeStart) || (t >= P.KeyWorkerProphTimeStart)) //changed this to start time geo
@@ -1303,7 +1303,7 @@ int TreatSweep(double t)
 						{
 							l = Mcells[b].members[i];
 							if ((!HOST_TO_BE_TREATED(l)) && ((P.TreatPropRadial == 1) || (ranf_mt(tn) < P.TreatPropRadial)))
-								DoProphNoDelay(l, ts, tn, 1);
+								DoProphNoDelay(l, ts, tn, 1, state);
 						}
 					}
 					if (P.DoGlobalTriggers)
@@ -1388,7 +1388,7 @@ int TreatSweep(double t)
 								if (((P.VaccProp == 1) || (ranf_mt(tn) < P.VaccProp)))
 								{
 									//add to the queue
-									DoVaccNoDelay(l,ts);
+									DoVaccNoDelay(l,ts, state);
 								}
 							}
 							Mcells[b].vacc = 2;
@@ -1723,7 +1723,7 @@ int TreatSweep(double t)
 										{
 											j2 = Mcells[k].members[i2];
 											if ((Hosts[j2].keyworker) && (!HOST_TO_BE_TREATED(j2)))
-												DoProphNoDelay(j2, ts, tn, nckwp);
+												DoProphNoDelay(j2, ts, tn, nckwp, state);
 										}
 									}
 								}

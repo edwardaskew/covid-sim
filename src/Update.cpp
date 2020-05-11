@@ -16,7 +16,7 @@ void RecordEvent(double, int, int, int, int); //added int as argument to InfectS
 unsigned short int ChooseFromICDF(double *, double, int);
 int ChooseFinalDiseaseSeverity(int, int);
 
-void DoImmune(int ai)
+void DoImmune(int ai, bitmap_state const* state)
 {
 	// This transfers a person straight from susceptible to immune. Used to start a run with a partially immune population.
 	person* a;
@@ -58,17 +58,17 @@ void DoImmune(int ai)
 			y = ((int)(Households[a->hh].loc_y * P.scaley)) - P.bminy;
 			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 			{
-				unsigned j = y * bmh->width + x;
-				if (j < bmh->imagesize)
+				unsigned j = y * state->width + x;
+				if (j < state->size)
 				{
 #pragma omp atomic
-					bmRecovered[j]++;
+					state->recovered[j]++;
 				}
 			}
 		}
 	}
 }
-void DoInfect(int ai, double t, int tn, int run) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
+void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
 {
 	///// This updates a number of things concerning person ai (and their contacts/infectors/places etc.) at time t in thread tn for this run.
 	int i;
@@ -130,11 +130,11 @@ void DoInfect(int ai, double t, int tn, int run) // Change person from susceptib
 				int iy = ((int)(Households[a->hh].loc_y * P.scaley)) - P.bminy;
 				if ((ix >= 0) && (ix < P.bwidth) && (iy >= 0) && (iy < P.bheight))
 				{
-					unsigned j = iy * bmh->width + ix;
-					if (j < bmh->imagesize)
+					unsigned j = iy * state->width + ix;
+					if (j < state->size)
 					{
 #pragma omp atomic
-						bmInfected[j]++;
+						state->infected[j]++;
 					}
 				}
 			}
@@ -150,8 +150,8 @@ void DoInfect(int ai, double t, int tn, int run) // Change person from susceptib
 		if ((t > 0) && (P.DoOneGen))
 		{
 			DoIncub(ai, ts, tn, run);
-			DoCase(ai, t, ts, tn);
-			DoRecover(ai, tn, run);
+			DoCase(ai, t, ts, tn, state);
+			DoRecover(ai, tn, run, state);
 		}
 	}
 }
@@ -511,7 +511,7 @@ void DoIncub(int ai, unsigned short int ts, int tn, int run)
 	}
 }
 
-void DoDetectedCase(int ai, double t, unsigned short int ts, int tn)
+void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state)
 {
 	//// Function DoDetectedCase does many things associated with various interventions.
 	//// Enacts Household quarantine, case isolation, place closure.
@@ -552,14 +552,14 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn)
 	if (t >= P.TreatTimeStart)
 		if ((P.TreatPropCases == 1) || (ranf_mt(tn) < P.TreatPropCases))
 		{
-			DoTreatCase(ai, ts, tn);
+			DoTreatCase(ai, ts, tn, state);
 			if (P.DoHouseholds)
 			{
 				if ((t < P.TreatTimeStart + P.TreatHouseholdsDuration) && ((P.TreatPropCaseHouseholds == 1) || (ranf_mt(tn) < P.TreatPropCaseHouseholds)))
 				{
 					j1 = Households[Hosts[ai].hh].FirstPerson; j2 = j1 + Households[Hosts[ai].hh].nh;
 					for (j = j1; j < j2; j++)
-						if (!HOST_TO_BE_TREATED(j)) DoProph(j, ts, tn);
+						if (!HOST_TO_BE_TREATED(j)) DoProph(j, ts, tn, state);
 				}
 			}
 			if (P.DoPlaces)
@@ -598,7 +598,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn)
 			if ((t < P.VaccTimeStart + P.VaccHouseholdsDuration) && ((P.VaccPropCaseHouseholds == 1) || (ranf_mt(tn) < P.VaccPropCaseHouseholds)))
 			{
 				j1 = Households[Hosts[ai].hh].FirstPerson; j2 = j1 + Households[Hosts[ai].hh].nh;
-				for (j = j1; j < j2; j++) DoVacc(j, ts);
+				for (j = j1; j < j2; j++) DoVacc(j, ts, state);
 			}
 
 		//// Giant compound if statement. If doing delays by admin unit, then window of HQuarantine dependent on admin unit-specific duration. This if statement ensures that this timepoint within window, regardless of how window defined.
@@ -769,7 +769,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn)
 
 }
 
-void DoCase(int ai, double t, unsigned short int ts, int tn) //// makes an infectious (but asymptomatic) person symptomatic. Called in IncubRecoverySweep (and DoInfect if P.DoOneGen)
+void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state) //// makes an infectious (but asymptomatic) person symptomatic. Called in IncubRecoverySweep (and DoInfect if P.DoOneGen)
 {
 	int j, k, f, j1, j2;
 	person* a;
@@ -834,7 +834,7 @@ void DoCase(int ai, double t, unsigned short int ts, int tn) //// makes an infec
 		{
 			StateT[tn].cumDC++;
 			StateT[tn].cumDC_adunit[Mcells[a->mcell].adunit]++;
-			DoDetectedCase(ai, t, ts, tn);
+			DoDetectedCase(ai, t, ts, tn, state);
 			//add detection time
 
 		}
@@ -857,18 +857,18 @@ void DoCase(int ai, double t, unsigned short int ts, int tn) //// makes an infec
 	}
 }
 
-void DoFalseCase(int ai, double t, unsigned short int ts, int tn)
+void DoFalseCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const *state)
 {
 	/* Arguably adult absenteeism to take care of sick kids could be included here, but then output absenteeism would not be 'excess' absenteeism */
 	if ((P.ControlPropCasesId == 1) || (ranf_mt(tn) < P.ControlPropCasesId))
 	{
 		if ((!P.DoEarlyCaseDiagnosis) || (State.cumDC >= P.PreControlClusterIdCaseThreshold)) StateT[tn].cumDC++;
-		DoDetectedCase(ai, t, ts, tn);
+		DoDetectedCase(ai, t, ts, tn, state);
 	}
 	StateT[tn].cumFC++;
 }
 
-void DoRecover(int ai, int tn, int run)
+void DoRecover(int ai, int tn, int run, bitmap_state const* state)
 {
 	int i, j, x, y;
 	person* a;
@@ -897,13 +897,13 @@ void DoRecover(int ai, int tn, int run)
 				y = ((int)(Households[a->hh].loc_y * P.scaley)) - P.bminy;
 				if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 				{
-					unsigned j = y * bmh->width + x;
-					if (j < bmh->imagesize)
+					unsigned j = y * state->width + x;
+					if (j < state->size)
 					{
 #pragma omp atomic
-						bmRecovered[j]++;
+						state->recovered[j]++;
 #pragma omp atomic
-						bmInfected[j]--;
+						state->infected[j]--;
 					}
 				}
 			}
@@ -913,7 +913,7 @@ void DoRecover(int ai, int tn, int run)
 	//fprintf(stderr, "\n ### %i %i  \n", ai, a->inf);
 }
 
-void DoDeath(int ai, int tn, int run)
+void DoDeath(int ai, int tn, int run, bitmap_state const* state)
 {
 	int i, x, y;
 	person* a = Hosts + ai;
@@ -943,13 +943,13 @@ void DoDeath(int ai, int tn, int run)
 				y = ((int)(Households[a->hh].loc_y * P.scaley)) - P.bminy;
 				if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 				{
-					unsigned j = y * bmh->width + x;
-					if (j < bmh->imagesize)
+					unsigned j = y * state->width + x;
+					if (j < state->size)
 					{
 #pragma omp atomic
-						bmRecovered[j]++;
+						state->recovered[j]++;
 #pragma omp atomic
-						bmInfected[j]--;
+						state->infected[j]--;
 					}
 				}
 			}
@@ -957,7 +957,7 @@ void DoDeath(int ai, int tn, int run)
 	}
 }
 
-void DoTreatCase(int ai, unsigned short int ts, int tn)
+void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *state)
 {
 	int x, y;
 
@@ -981,11 +981,11 @@ void DoTreatCase(int ai, unsigned short int ts, int tn)
 				y = ((int)(Households[Hosts[ai].hh].loc_y * P.scaley)) - P.bminy;
 				if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 				{
-					unsigned j = y * bmh->width + x;
-					if (j < bmh->imagesize)
+					unsigned j = y * state->width + x;
+					if (j < state->size)
 					{
 #pragma omp atomic
-						bmTreated[j]++;
+						state->treated[j]++;
 					}
 				}
 			}
@@ -993,7 +993,7 @@ void DoTreatCase(int ai, unsigned short int ts, int tn)
 	}
 }
 
-void DoProph(int ai, unsigned short int ts, int tn)
+void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state)
 {
 	//// almost identical to DoProphNoDelay, except unsurprisingly this function includes delay between timestep and start of treatment. Also increments StateT[tn].cumT_keyworker by 1 every time.
 	int x, y;
@@ -1014,18 +1014,18 @@ void DoProph(int ai, unsigned short int ts, int tn)
 			y = ((int)(Households[Hosts[ai].hh].loc_y * P.scaley)) - P.bminy;
 			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 			{
-				unsigned j = y * bmh->width + x;
-				if (j < bmh->imagesize)
+				unsigned j = y * state->width + x;
+				if (j < state->size)
 				{
 #pragma omp atomic
-					bmTreated[j]++;
+					state->treated[j]++;
 				}
 			}
 		}
 	}
 }
 
-void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc)
+void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state const* state)
 {
 	int x, y;
 
@@ -1045,11 +1045,11 @@ void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc)
 			y = ((int)(Households[Hosts[ai].hh].loc_y * P.scaley)) - P.bminy;
 			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 			{
-				unsigned j = y * bmh->width + x;
-				if (j < bmh->imagesize)
+				unsigned j = y * state->width + x;
+				if (j < state->size)
 				{
 #pragma omp atomic
-					bmTreated[j]++;
+					state->treated[j]++;
 				}
 			}
 		}
@@ -1234,7 +1234,7 @@ void DoPlaceOpen(int i, int j, unsigned short int ts, int tn)
 	}
 }
 
-int DoVacc(int ai, unsigned short int ts)
+int DoVacc(int ai, unsigned short int ts, bitmap_state const* state)
 {
 	int x, y;
 
@@ -1261,11 +1261,11 @@ int DoVacc(int ai, unsigned short int ts)
 			y = ((int)(Households[Hosts[ai].hh].loc_y * P.scaley)) - P.bminy;
 			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 			{
-				unsigned j = y * bmh->width + x;
-				if (j < bmh->imagesize)
+				unsigned j = y * state->width + x;
+				if (j < state->size)
 				{
 #pragma omp atomic
-					bmTreated[j]++;
+					state->treated[j]++;
 				}
 			}
 		}
@@ -1273,7 +1273,7 @@ int DoVacc(int ai, unsigned short int ts)
 	return 0;
 }
 
-void DoVaccNoDelay(int ai, unsigned short int ts)
+void DoVaccNoDelay(int ai, unsigned short int ts, bitmap_state const* state)
 {
 	int x, y;
 
@@ -1295,11 +1295,11 @@ void DoVaccNoDelay(int ai, unsigned short int ts)
 			y = ((int)(Households[Hosts[ai].hh].loc_y * P.scaley)) - P.bminy;
 			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 			{
-				unsigned j = y * bmh->width + x;
-				if (j < bmh->imagesize)
+				unsigned j = y * state->width + x;
+				if (j < state->size)
 				{
 #pragma omp atomic
-					bmTreated[j]++;
+					state->treated[j]++;
 				}
 			}
 		}

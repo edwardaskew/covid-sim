@@ -2,6 +2,7 @@
 #define COVIDSIM_BITMAP_H_INCLUDED_
 
 #include <stdint.h>
+#include "Error.h"
 
 #ifdef UNIX
 #define DIRECTORY_SEPARATOR "/"
@@ -21,6 +22,7 @@
 #include "Magick++.h"
 #endif
 
+
 #define BWCOLS 58
 
 typedef struct BITMAP_HEADER {
@@ -37,12 +39,35 @@ typedef struct BITMAP_HEADER {
 	unsigned char palette[BWCOLS * 4][4];
 } bitmap_header;
 
-extern int32_t *bmPopulation, *bmInfected, *bmRecovered, *bmTreated;
-extern bitmap_header* bmh;
+struct bitmap_state {
 
-void CaptureBitmap();
-void OutputBitmap(int);
-void InitBMHead();
+	bitmap_state(unsigned int width, unsigned int height): width(width), height(height), size(width*height)
+	{
+		population = (int32_t*)calloc(size, sizeof(int32_t));
+		infected = (int32_t*)calloc(size, sizeof(int32_t));
+		recovered = (int32_t*)calloc(size, sizeof(int32_t));
+		treated = (int32_t*)calloc(size, sizeof(int32_t));
+		if (!population || !infected || !recovered || !treated) {
+			ERR_CRITICAL("Unable to allocate storage for bitmap\n");
+		}
+	}
+	~bitmap_state() {
+		free(population);
+		free(infected);
+		free(recovered);
+		free(treated);
+	}
+	const unsigned int width, height, size;
+
+	int32_t* population;
+	int32_t* infected;
+	int32_t* recovered;
+	int32_t* treated;
+};
+
+void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state);
+void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf);
+void InitBMHead(bitmap_header*& bmh, unsigned char*& bmPixels, unsigned char*& bmp, unsigned char*& bmf);
 
 void Bitmap_Finalise();
 

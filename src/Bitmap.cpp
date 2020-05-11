@@ -24,12 +24,18 @@ static CLSID  encoderClsid;
 #include <sys/stat.h> // for mkdir
 #endif
 
-static unsigned char* bmf, *bmPixels, *bmp;
 // externs from CovidSim.cpp
 // TODO: move these to a header files
 extern char OutFile[1024], OutFileBase[1024];
 
-void CaptureBitmap()
+struct BitMap
+{
+	bitmap_header const* header;
+	void* bmPixels;
+	void* bmf;
+};
+
+void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state)
 {
 	int i, x, y, f, mi;
 	unsigned j;
@@ -37,23 +43,24 @@ void CaptureBitmap()
 	static int fst = 1;
 	double prev;
 
+
 	mi = (int)(P.bwidth * P.bheight);
 	if (fst)
 	{
 		fst = 0;
 		int32_t maxPop = 0;
-		for (i = 0; i < mi; i++) bmPopulation[i] = 0;
+		for (i = 0; i < mi; i++) state->population[i] = 0;
 		for (i = 0; i < P.PopSize; i++)
 		{
 			x = ((int)(Households[Hosts[i].hh].loc_x * P.scalex)) - P.bminx;
 			y = ((int)(Households[Hosts[i].hh].loc_y * P.scaley)) - P.bminy;
 			if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 			{
-				j = y * bmh->width + x;
-				if ((j < bmh->imagesize) && (j >= 0))
+				j = y * state->width + x;
+				if ((j < state->size) && (j >= 0))
 				{
-					bmPopulation[j]++;
-					if (bmPopulation[j] > maxPop) maxPop = bmPopulation[j];
+					state->population[j]++;
+					if (state->population[j] > maxPop) maxPop = state->population[j];
 				}
 			}
 		}
@@ -74,8 +81,8 @@ void CaptureBitmap()
 					y = (int)(P.mcheight * (((double)(i % P.nmch)) + 0.5) * P.scaley) - P.bminy;
 					if ((x >= 0) && (x < P.bwidth) && (y >= 0) && (y < P.bheight))
 					{
-						j = y * bmh->width + x;
-						if ((j < bmh->imagesize) && (j >= 0)) bmPopulation[j] = -1;
+						j = y * state->width + x;
+						if ((j < state->size) && (j >= 0)) state->population[j] = -1;
 					}
 				}
 			}
@@ -85,29 +92,29 @@ void CaptureBitmap()
 			f = ((int)prev);
 			for (j = 0; j < 10; j++)
 			{
-				bmPixels[(j + P.bheight + 5) * bmh->width + P.bwidth / 4 + i] = f;
+				bmPixels[(j + P.bheight + 5) * state->width + P.bwidth / 4 + i] = f;
 			}
 		}
 	}
 #pragma omp parallel for private(i) schedule(static,5000)
 	for (i = 0; i < mi; i++)
 	{
-		if (bmPopulation[i] == -1)
+		if (state->population[i] == -1)
 			bmPixels[i] = BWCOLS - 1; /* black for country boundary */
-		else if (bmInfected[i] > 0)
-			bmPixels[i] = (unsigned char)(BWCOLS + BWCOLS * log((double)bmInfected[i]) / logMaxPop); /* red for infected */
-		else if (bmTreated[i] > 0)
-			bmPixels[i] = (unsigned char)(2 * BWCOLS + BWCOLS * log((double)bmTreated[i]) / logMaxPop); /* blue for treated */
-		else if (bmRecovered[i] > 0)
-			bmPixels[i] = (unsigned char)(3 * BWCOLS + BWCOLS * log((double)bmRecovered[i]) / logMaxPop);  /* green for recovered */
-		else if (bmPopulation[i] > 0)
-			bmPixels[i] = (unsigned char)(BWCOLS * log((double)bmPopulation[i]) / logMaxPop); /* grey for just people */
+		else if (state->infected[i] > 0)
+			bmPixels[i] = (unsigned char)(BWCOLS + BWCOLS * log((double)state->infected[i]) / logMaxPop); /* red for infected */
+		else if (state->treated[i] > 0)
+			bmPixels[i] = (unsigned char)(2 * BWCOLS + BWCOLS * log((double)state->treated[i]) / logMaxPop); /* blue for treated */
+		else if (state->recovered[i] > 0)
+			bmPixels[i] = (unsigned char)(3 * BWCOLS + BWCOLS * log((double)state->population[i]) / logMaxPop);  /* green for recovered */
+		else if (state->population[i] > 0)
+			bmPixels[i] = (unsigned char)(BWCOLS * log((double)state->population[i]) / logMaxPop); /* grey for just people */
 		else
 			bmPixels[i] = 0;
 	}
 }
 
-void OutputBitmap(int tp)
+void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf)
 {
 	char buf[3000], OutF[3000];
 	int j = 0;
@@ -218,7 +225,7 @@ void OutputBitmap(int tp)
 	  fprintf(stderr, "Unknown Bitmap format: %d\n", (int)P.BitmapFormat);
 	}
 }
-void InitBMHead()
+void InitBMHead(bitmap_header *& bmh, unsigned char *& bmPixels, unsigned char *& bmp, unsigned char *& bmf)
 {
 	int i, j, k, k2, value;
 
@@ -266,14 +273,6 @@ void InitBMHead()
 		bmh->palette[3 * BWCOLS + j][1] = (unsigned char)value;
 		bmh->palette[3 * BWCOLS + j][2] = 0;
 	}
-	if (!(bmPopulation = (int32_t*)malloc(bmh->imagesize * sizeof(int32_t))))
-		ERR_CRITICAL("Unable to allocate storage for bitmap\n");
-	if (!(bmInfected = (int32_t*)malloc(bmh->imagesize * sizeof(int32_t))))
-		ERR_CRITICAL("Unable to allocate storage for bitmap\n");
-	if (!(bmRecovered = (int32_t*)malloc(bmh->imagesize * sizeof(int32_t))))
-		ERR_CRITICAL("Unable to allocate storage for bitmap\n");
-	if (!(bmTreated = (int32_t*)malloc(bmh->imagesize * sizeof(int32_t))))
-		ERR_CRITICAL("Unable to allocate storage for bitmap\n");
 
 	if (P.BitmapFormat == BF_PNG)
 	{

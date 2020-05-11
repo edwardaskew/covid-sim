@@ -592,10 +592,6 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		}
 	}
 
-	if (P.OutputBitmap)
-	{
-		InitBMHead();
-	}
 	if (P.DoMassVacc)
 	{
 		if (!(State.mvacc_queue = (int*)calloc(P.PopSize, sizeof(int)))) ERR_CRITICAL("Unable to allocate host storage\n");
