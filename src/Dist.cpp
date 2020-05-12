@@ -57,7 +57,7 @@ double dist2(person* a, person* b, param const& P, household const* Households)
 		return x * x + y * y;
 	}
 }
-double dist2_cc(cell* a, cell* b, param const& P)
+double dist2_cc(cell* a, cell* b, param const& P, cell const* Cells)
 {
 	double x, y;
 	int l, m;
@@ -79,7 +79,7 @@ double dist2_cc(cell* a, cell* b, param const& P)
 		return x * x + y * y;
 	}
 }
-double dist2_cc_min(cell* a, cell* b, param const& P)
+double dist2_cc_min(cell* a, cell* b, param const& P, cell const* Cells)
 {
 	double x, y;
 	int l, m, i, j;
@@ -150,7 +150,7 @@ double dist2_cc_min(cell* a, cell* b, param const& P)
 		return x * x + y * y;
 	}
 }
-double dist2_mm(microcell* a, microcell* b, param const& P)
+double dist2_mm(microcell const* a, microcell const* b, param const& P, microcell const* Mcells)
 {
 	double x, y;
 	int l, m;

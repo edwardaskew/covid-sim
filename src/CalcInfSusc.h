@@ -8,9 +8,9 @@ double CalcHouseInf(int, unsigned short int, param const& P, person const* Hosts
 double CalcPlaceInf(int, int, unsigned short int, param const& P, person const* Hosts);
 double CalcSpatialInf(int, unsigned short int, param const& P, person const* Hosts);
 double CalcPersonInf(int, unsigned short int, param const& P, person const* Hosts);
-double CalcHouseSusc(int, unsigned short int, int, int, param const& P, person const* Hosts);
-double CalcPlaceSusc(int, int, unsigned short int, int, int, param const& P, person const* Hosts);
-double CalcSpatialSusc(int, unsigned short int, int, int, param const& P, person const* Hosts);
+double CalcHouseSusc(int, unsigned short int, int, int, param const& P, person const* Hosts, microcell const* Mcells);
+double CalcPlaceSusc(int, int, unsigned short int, int, int, param const& P, person const* Hosts, microcell const* Mcells);
+double CalcSpatialSusc(int, unsigned short int, int, int, param const& P, person const* Hosts, microcell const* Mcells);
 double CalcPersonSusc(int, unsigned short int, int, int, param const& P, person const* Hosts);
 
 #endif // COVIDSIM_CALCINFSUSC_

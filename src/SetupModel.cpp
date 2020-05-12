@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -193,7 +193,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2, P)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight, P)));
 	t2 = 0.0;
 
-	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT);
+	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup);
 	if (!(TimeSeries = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSMeanE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSVarE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
@@ -276,7 +276,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		if (P.LoadSaveNetwork == 1)
 			LoadPeopleToPlaces(NetworkFile, P, Hosts);
 		else
-			AssignPeopleToPlaces(P, Hosts, Households);
+			AssignPeopleToPlaces(P, Hosts, Households, Cells, CellLookup, Mcells);
 	}
 
 
@@ -304,7 +304,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	P.KernelP3 = P.MoveKernelP3;
 	P.KernelP4 = P.MoveKernelP4;
 	P.KernelType = P.MoveKernelType;
-	InitKernel(0, 1.0, P);
+	InitKernel(0, 1.0, P, Cells, CellLookup);
 
 	if (P.DoPlaces)
 	{
@@ -449,8 +449,8 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	}
 
 
-	UpdateProbs(0, P);
-	if (P.DoAirports) SetupAirports(P);
+	UpdateProbs(0, P, CellLookup);
+	if (P.DoAirports) SetupAirports(P, Cells, CellLookup, Mcells);
 	if (P.R0scale != 1.0)
 	{
 		P.HouseholdTrans *= P.R0scale;
@@ -636,11 +636,11 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	PeakHeightSum = PeakHeightSS = PeakTimeSum = PeakTimeSS = 0;
 	i = (P.ncw / 2) * P.nch + P.nch / 2;
 	j = (P.ncw / 2 + 2) * P.nch + P.nch / 2;
-	fprintf(stderr, "UTM dist horiz=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P)), sqrt(dist2_cc(Cells + j, Cells + i, P)));
+	fprintf(stderr, "UTM dist horiz=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P, Cells)), sqrt(dist2_cc(Cells + j, Cells + i, P, Cells)));
 	j = (P.ncw / 2) * P.nch + P.nch / 2 + 2;
-	fprintf(stderr, "UTM dist vert=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P)), sqrt(dist2_cc(Cells + j, Cells + i, P)));
+	fprintf(stderr, "UTM dist vert=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P, Cells)), sqrt(dist2_cc(Cells + j, Cells + i, P, Cells)));
 	j = (P.ncw / 2 + 2) * P.nch + P.nch / 2 + 2;
-	fprintf(stderr, "UTM dist diag=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P)), sqrt(dist2_cc(Cells + j, Cells + i, P)));
+	fprintf(stderr, "UTM dist diag=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P, Cells)), sqrt(dist2_cc(Cells + j, Cells + i, P, Cells)));
 
 	//if(P.OutputBitmap)
 	//{
@@ -650,7 +650,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Model configuration complete.\n");
 }
 
-void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT)
+void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup)
 {
 	int i, j, k, l, m, i2, j2, last_i, mr, ad, tn, *mcl, country;
 	unsigned int rn, rn2;
@@ -1083,7 +1083,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 				m = Hosts[i].listpos;
 				xh = P.mcwidth * (ranf_mt(tn) + x);
 				yh = P.mcheight * (ranf_mt(tn) + y);
-				AssignHouseholdAges(m, i, tn, P, Hosts, State);
+				AssignHouseholdAges(m, i, tn, P, Hosts, State, Mcells);
 				for (i2 = 0; i2 < m; i2++) Hosts[i + i2].listpos = 0;
 				if (P.DoHouseholds)
 				{
@@ -1442,7 +1442,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 	fprintf(stderr, "Assigned hosts to cells\n");
 
 }
-void SetupAirports(param& P)
+void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells)
 {
 	int i, j, k, l, m;
 	double x, y, t, tmin;
@@ -1457,7 +1457,7 @@ void SetupAirports(param& P)
 	P.KernelShape = P.AirportKernelShape;
 	P.KernelP3 = P.AirportKernelP3;
 	P.KernelP4 = P.AirportKernelP4;
-	InitKernel(1, 1.0, P);
+	InitKernel(1, 1.0, P, Cells, CellLookup);
 	if (!(Airports[0].DestMcells = (indexlist*)calloc(P.NMCP * NNA, sizeof(indexlist)))) ERR_CRITICAL("Unable to allocate airport storage\n");
 	if (!(base = (indexlist*)calloc(P.NMCP * NNA, sizeof(indexlist)))) ERR_CRITICAL("Unable to allocate airport storage\n");
 	for (i = 0; i < P.Nairports; i++) Airports[i].num_mcell = 0;
@@ -1615,14 +1615,14 @@ void SetupAirports(param& P)
 	P.KernelShape = P.MoveKernelShape;
 	P.KernelP3 = P.MoveKernelP3;
 	P.KernelP4 = P.MoveKernelP4;
-	InitKernel(0, 1.0, P);
+	InitKernel(0, 1.0, P, Cells, CellLookup);
 	fprintf(stderr, "\nAirport initialisation completed successfully\n");
 }
 
 #define PROP_OTHER_PARENT_AWAY 0.0
 
 
-void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts, popvar const& State)
+void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts, popvar const& State, microcell const* Mcells)
 {
 	/* Complex household age distribution model
 		- picks number of children (nc)
@@ -1794,7 +1794,7 @@ void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts,
 	for (i = 0; i < n; i++) Hosts[pers + i].age = (unsigned char) a[i];
 }
 
-void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households)
+void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells)
 {
 	int i, i2, j, j2, k, k2, l, m, m2, tp, f, f2, f3, f4, ic, mx, my, a, cnt, tn, ca, nt, nn;
 	int* PeopleArray;
@@ -1856,7 +1856,7 @@ void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households)
 				j2 = 0;
 				for (a = 0; a < P.NCP; a++)
 				{
-					cell *c = CellLookup[a];
+					cell const* c = CellLookup[a];
 					for (j = 0; j < c->n; j++)
 					{
 						PeopleArray[j2] = c->susceptible[j];
@@ -2044,8 +2044,8 @@ void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households)
 				P.KernelShape = P.PlaceTypeKernelShape[tp];
 				P.KernelP3 = P.PlaceTypeKernelP3[tp];
 				P.KernelP4 = P.PlaceTypeKernelP4[tp];
-				InitKernel(1, 1.0, P);
-				UpdateProbs(1, P);
+				InitKernel(1, 1.0, P, Cells, CellLookup);
+				UpdateProbs(1, P, CellLookup);
 				ca = 0;
 				fprintf(stderr, "Allocating people to place type %i\n", tp);
 				a = cnt;
@@ -2183,7 +2183,7 @@ void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households)
 					f = k2;
 					for (ic = 0; ic <= 30; ic++)
 					{
-						UpdateProbs(1, P);
+						UpdateProbs(1, P, CellLookup);
 						m2 = f - 1;
 						if (ic < 9)
 							f = 100 * (9 - ic) * a;

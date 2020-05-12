@@ -23,7 +23,7 @@
 //          nKernel[0]   ... nKernel[P.NKR / P.NK_HR] ... nKernel[P.NKR]
 //          nKernelHR[0] ... nKernelHR[P.NKR]
 double *nKernel, *nKernelHR;
-void InitKernel(int DoPlaces, double norm, param const& P)
+void InitKernel(int DoPlaces, double norm, param const& P, cell const* Cells, cell** CellLookup)
 {
 	int i, j;
 	double(*Kernel)(double, param const& P);
@@ -59,7 +59,7 @@ void InitKernel(int DoPlaces, double norm, param const& P)
 		for (j = 0; j < P.NCP; j++)
 		{
 			cell *m = CellLookup[j];
-			l->tot_prob += (l->max_trans[j] = (float)numKernel(dist2_cc_min(l, m, P), P)) * m->n;
+			l->tot_prob += (l->max_trans[j] = (float)numKernel(dist2_cc_min(l, m, P, Cells), P)) * m->n;
 		}
 	}
 }

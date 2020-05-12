@@ -328,8 +328,6 @@ typedef struct ADMINUNIT {
 } adminunit;
 
 #pragma pack(pop)
-extern cell* Cells, ** CellLookup;
-extern microcell* Mcells, ** McellLookup;
 extern place** Places;
 extern adminunit AdUnits[MAX_ADUNITS];
 
