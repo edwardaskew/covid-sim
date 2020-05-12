@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "Error.h"
 #include "Param.h"
+#include "Model.h"
 
 #ifdef UNIX
 #define DIRECTORY_SEPARATOR "/"
@@ -66,7 +67,7 @@ struct bitmap_state {
 	int32_t* treated;
 };
 
-void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state, param const& P);
+void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state, param const& P, person const* Hosts);
 void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf, param const& P);
 void InitBMHead(bitmap_header*& bmh, unsigned char*& bmPixels, unsigned char*& bmp, unsigned char*& bmf, param const& P);
 

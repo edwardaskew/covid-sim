@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -193,7 +193,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2, P)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight, P)));
 	t2 = 0.0;
 
-	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P);
+	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts);
 	if (!(TimeSeries = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSMeanE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSVarE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
@@ -274,21 +274,21 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	if (P.DoPlaces)
 	{
 		if (P.LoadSaveNetwork == 1)
-			LoadPeopleToPlaces(NetworkFile, P);
+			LoadPeopleToPlaces(NetworkFile, P, Hosts);
 		else
-			AssignPeopleToPlaces(P);
+			AssignPeopleToPlaces(P, Hosts);
 	}
 
 
 	if ((P.DoPlaces) && (P.LoadSaveNetwork == 2))
-		SavePeopleToPlaces(NetworkFile, P);
+		SavePeopleToPlaces(NetworkFile, P, Hosts);
 	//SaveDistribs();
 
 	// From here on, we want the same random numbers regardless of whether we used the RNG to make the network,
 	// or loaded the network from a file. Therefore we need to reseed the RNG.
 	setall(&P.nextSetupSeed1, &P.nextSetupSeed2);
 
-	StratifyPlaces(P);
+	StratifyPlaces(P, Hosts);
 	for (i = 0; i < P.NC; i++)
 	{
 		Cells[i].S = Cells[i].n;
@@ -650,7 +650,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Model configuration complete.\n");
 }
 
-void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P)
+void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts)
 {
 	int i, j, k, l, m, i2, j2, last_i, mr, ad, tn, *mcl, country;
 	unsigned int rn, rn2;
@@ -1083,7 +1083,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 				m = Hosts[i].listpos;
 				xh = P.mcwidth * (ranf_mt(tn) + x);
 				yh = P.mcheight * (ranf_mt(tn) + y);
-				AssignHouseholdAges(m, i, tn, P);
+				AssignHouseholdAges(m, i, tn, P, Hosts);
 				for (i2 = 0; i2 < m; i2++) Hosts[i + i2].listpos = 0;
 				if (P.DoHouseholds)
 				{
@@ -1622,7 +1622,7 @@ void SetupAirports(param& P)
 #define PROP_OTHER_PARENT_AWAY 0.0
 
 
-void AssignHouseholdAges(int n, int pers, int tn, param const& P)
+void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts)
 {
 	/* Complex household age distribution model
 		- picks number of children (nc)
@@ -1794,7 +1794,7 @@ void AssignHouseholdAges(int n, int pers, int tn, param const& P)
 	for (i = 0; i < n; i++) Hosts[pers + i].age = (unsigned char) a[i];
 }
 
-void AssignPeopleToPlaces(param& P)
+void AssignPeopleToPlaces(param& P, person* Hosts)
 {
 	int i, i2, j, j2, k, k2, l, m, m2, tp, f, f2, f3, f4, ic, mx, my, a, cnt, tn, ca, nt, nn;
 	int* PeopleArray;
@@ -2281,7 +2281,7 @@ void AssignPeopleToPlaces(param& P)
 	}
 
 }
-void StratifyPlaces(param const& P)
+void StratifyPlaces(param const& P, person* Hosts)
 {
 	int i, j, k, l, m, n, tn;
 	double t;
@@ -2414,7 +2414,7 @@ void StratifyPlaces(param const& P)
 		*/
 	}
 }
-void LoadPeopleToPlaces(char* NetworkFile, param const& P)
+void LoadPeopleToPlaces(char* NetworkFile, param const& P, person* Hosts)
 {
 	int i, j, k, l, m, n, npt, i2;
 	long s1, s2;
@@ -2469,7 +2469,7 @@ void LoadPeopleToPlaces(char* NetworkFile, param const& P)
 	*/	fprintf(stderr, "\n");
 	fclose(dat);
 }
-void SavePeopleToPlaces(char* NetworkFile, param const& P)
+void SavePeopleToPlaces(char* NetworkFile, param const& P, person const* Hosts)
 {
 	int i, j, npt;
 	FILE* dat;

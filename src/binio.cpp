@@ -24,7 +24,7 @@ size_t fwrite_big(void const* buffer,size_t size,size_t count, FILE *stream)
 	return ret;
 }
 
-size_t fread_big(void const*buffer,size_t size,size_t count, FILE *stream)
+size_t fread_big(void * buffer,size_t size,size_t count, FILE *stream)
 {
 	const unsigned long long mx=0x80000000;
 	unsigned long long j,n,st;
@@ -102,7 +102,7 @@ size_t zfwrite_big(void const*buffer,size_t size,size_t count, FILE *stream)
 	*/
 }
 
-size_t zfread_big(void const*buffer,size_t size,size_t count, FILE *stream)
+size_t zfread_big(void * buffer,size_t size,size_t count, FILE *stream)
 {
 	return fread_big(buffer,size,count,stream);
 	/*

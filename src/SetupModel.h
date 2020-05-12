@@ -1,14 +1,14 @@
 #ifndef COVIDSIM_SETUPMODEL_H_INCLUDED_
 #define COVIDSIM_SETUPMODEL_H_INCLUDED_
 
-void SetupModel(char*, char*, char*, char*, param& P);
-void SetupPopulation(char*, char*, char*, param& P);
+void SetupModel(char*, char*, char*, char*, param& P, person *& Hosts);
+void SetupPopulation(char*, char*, char*, param& P, person *& Hosts);
 void SetupAirports(param& P);
-void AssignHouseholdAges(int, int, int, param const& P);
-void AssignPeopleToPlaces(param& P);
-void StratifyPlaces(param const& P);
-void LoadPeopleToPlaces(char*, param const& P);
-void SavePeopleToPlaces(char*, param const& P);
+void AssignHouseholdAges(int, int, int, param const& P, person* Hosts);
+void AssignPeopleToPlaces(param& P, person* Hosts);
+void StratifyPlaces(param const& P, person* Hosts);
+void LoadPeopleToPlaces(char*, param const& P, person* Hosts);
+void SavePeopleToPlaces(char*, param const& P, person const* Hosts);
 void SaveAgeDistrib(param const& P);
 void UpdateProbs(int, param const& P);
 
