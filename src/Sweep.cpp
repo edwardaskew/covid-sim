@@ -66,7 +66,7 @@ void TravelReturnSweep(double t, param const& P, person* Hosts)
 	}
 }
 
-void TravelDepartSweep(double t, param const& P, person* Hosts)
+void TravelDepartSweep(double t, param const& P, person* Hosts, household const* Households)
 {
 	int c, i, i2, j, k, l, d, d2, m, n, f, f2, f3, mps, nld, nad, nsk, tn, bm, hp;
 	double s, s2, nl;
@@ -263,7 +263,7 @@ void TravelDepartSweep(double t, param const& P, person* Hosts)
 	}
 }
 
-void InfectSweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts) //added run number as argument in order to record it in event log
+void InfectSweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households) //added run number as argument in order to record it in event log
 {
 	//// This function loops over infected people, and decides whom to infect. Structure is 1) #pragma loop over all cells then 1a) infectious people, which chooses who they will infect, adds them to a queue
 	//// Next 2) #pragma loop infects those people from queue (using DoInfect function). This is to avoid race conditions.
@@ -323,7 +323,7 @@ void InfectSweep(double t, int run, bitmap_state const* state, param const& P, p
 					{
 						l = Households[si->hh].FirstPerson;
 						m = l + Households[si->hh].nh;
-						s3 = hbeta * CalcHouseInf(ci, ts, P, Hosts);
+						s3 = hbeta * CalcHouseInf(ci, ts, P, Hosts, Households);
 						f = 0;
 						for (i3 = l; (i3 < m) && (!f); i3++) //// loop over people in household
 							f = HOST_ABSENT(i3);
@@ -619,7 +619,7 @@ void InfectSweep(double t, int run, bitmap_state const* state, param const& P, p
 						///// pick random person m within susceptibles of cell ct (S0 initial number susceptibles within cell).
 						m = (int)(ranf_mt(tn) * ((double)ct->S0));
 						i3 = ct->susceptible[m];
-						s2 = dist2(Hosts + i3, Hosts + ci, P); /// calculate distance squared between this susceptible person and person ci/si identified earlier
+						s2 = dist2(Hosts + i3, Hosts + ci, P, Households); /// calculate distance squared between this susceptible person and person ci/si identified earlier
 						s = numKernel(s2, P) / c->max_trans[l]; //// acceptance probability
 						f2 = 0;
 						if ((ranf_mt(tn) >= s) || (abs(Hosts[i3].inf) == InfStat_Dead)) //// if rejected, or infectee i3/m already dead, ensure do-while evaluated again (i.e. choose a new infectee).
@@ -707,16 +707,16 @@ void InfectSweep(double t, int run, bitmap_state const* state, param const& P, p
 				Hosts[infectee].infector = infector;
 				Hosts[infectee].infect_type = infect_type;
 				if (infect_type == -1) //// i.e. if host doesn't have an infector
-					DoFalseCase(infectee, t, ts, j, state, P, Hosts);
+					DoFalseCase(infectee, t, ts, j, state, P, Hosts, Households);
 				else
-					DoInfect(infectee, t, j, run, state, P, Hosts);
+					DoInfect(infectee, t, j, run, state, P, Hosts, Households);
 			}
 			StateT[k].n_queue[j] = 0;
 		}
 	}
 }
 
-void IncubRecoverySweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts)
+void IncubRecoverySweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households)
 {
 	int i, j, k, l, b, tn, ci;
 	double ht;
@@ -776,7 +776,7 @@ void IncubRecoverySweep(double t, int run, bitmap_state const* state, param cons
 				/* Following line not 100% consistent with DoIncub. All severity time points (e.g. SARI time) are added to latent_time, not latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep))*/
 				tc = si->latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep)); //// time that person si/ci becomes case (symptomatic)...
 				if ((P.DoSymptoms) && (ts == tc)) //// ... if now is that time...
-					DoCase(ci, t, ts, tn, state, P, Hosts);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
+					DoCase(ci, t, ts, tn, state, P, Hosts, Households);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
 
 				if (P.DoSeverity)
 				{
@@ -797,15 +797,15 @@ void IncubRecoverySweep(double t, int run, bitmap_state const* state, param cons
 				{
 					if (!si->to_die) //// if person si recovers and this timestep is after they've recovered
 					{
-						DoRecover(ci, tn, run, state, P, Hosts);
+						DoRecover(ci, tn, run, state, P, Hosts, Households);
 						//StateT[tn].inf_queue[0][StateT[tn].n_queue[0]++] = ci; //// add them to end of 0th thread of inf queue. Don't get why 0 here.
 					}
 					else /// if they die and this timestep is after they've died.
 					{
 						if (HOST_TREATED(ci) && (ranf_mt(tn) < P.TreatDeathDrop))
-							DoRecover(ci, tn, run, state, P, Hosts);
+							DoRecover(ci, tn, run, state, P, Hosts, Households);
 						else
-							DoDeath(ci, tn, run, state, P, Hosts);
+							DoDeath(ci, tn, run, state, P, Hosts, Households);
 					}
 
 					//once host recovers, will no longer make contacts for contact tracing - if we are doing contact tracing and case was infectious when contact tracing was active, increment state vector
@@ -821,7 +821,7 @@ void IncubRecoverySweep(double t, int run, bitmap_state const* state, param cons
 }
 
 
-void DigitalContactTracingSweep(double t, bitmap_state const* state, param const& P, person* Hosts)
+void DigitalContactTracingSweep(double t, bitmap_state const* state, param const& P, person* Hosts, household const* Households)
 {
 	/**
 	 * Function: DigitalContactTracingSweep
@@ -1095,7 +1095,7 @@ void DigitalContactTracingSweep(double t, bitmap_state const* state, param const
 									//if they are asymptomatic, i.e. specifically if they have inf flag 2, call DoDetectedCase in order to trigger HQ and PC too.
 									if (Hosts[contact].inf == 2)
 									{
-										DoDetectedCase(contact, t, ts, tn, state, P, Hosts);
+										DoDetectedCase(contact, t, ts, tn, state, P, Hosts, Households);
 										Hosts[contact].detected = 1; Hosts[contact].detected_time = ts;
 									}
 								}
@@ -1125,7 +1125,7 @@ void DigitalContactTracingSweep(double t, bitmap_state const* state, param const
 							//if they are asymptomatic, i.e. specifically if they have inf flag 2, call DoDetectedCase in order to trigger HQ and PC too.
 							if (Hosts[contact].inf == 2)
 							{
-								DoDetectedCase(contact, t, ts, tn, state, P, Hosts);
+								DoDetectedCase(contact, t, ts, tn, state, P, Hosts, Households);
 								Hosts[contact].detected = 1; Hosts[contact].detected_time = ts;
 							}
 						}
@@ -1161,7 +1161,7 @@ void DigitalContactTracingSweep(double t, bitmap_state const* state, param const
 }
 
 
-int TreatSweep(double t, bitmap_state const* state, param const& P, person* Hosts)
+int TreatSweep(double t, bitmap_state const* state, param const& P, person* Hosts, household const* Households)
 {
 	///// function loops over microcells to decide which cells are treated (either with treatment, vaccine, social distancing, movement restrictions etc.)
 
@@ -1223,7 +1223,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 														else
 							*/
 							if ((!HOST_TO_BE_TREATED(Places[j][l].members[m])) && ((P.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < P.TreatPlaceTotalProp[j])))
-								DoProph(Places[j][l].members[m], ts, i, state, P, Hosts);
+								DoProph(Places[j][l].members[m], ts, i, state, P, Hosts, Households);
 						}
 					}
 					else
@@ -1236,7 +1236,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 								if (!HOST_TO_BE_TREATED(Places[j][l].members[m]))
 								{
 									if ((P.TreatPlaceTotalProp[j] == 1) || (ranf_mt(i) < P.TreatPlaceTotalProp[j]))
-										DoProph(Places[j][l].members[m], ts, i, state, P, Hosts);
+										DoProph(Places[j][l].members[m], ts, i, state, P, Hosts, Households);
 								}
 						}
 						Places[j][l].treat = 0;
@@ -1254,7 +1254,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 			if (m > State.n_mvacc) m = State.n_mvacc;
 #pragma omp parallel for private(i) schedule(static,1000)
 			for (i = State.mvacc_cum; i < m; i++)
-				DoVacc(State.mvacc_queue[i], ts, state, P, Hosts);
+				DoVacc(State.mvacc_queue[i], ts, state, P, Hosts, Households);
 			State.mvacc_cum = m;
 		}
 	if ((t >= P.TreatTimeStart) || (t >= P.VaccTimeStartGeo) || (t >= P.PlaceCloseTimeStart) || (t >= P.MoveRestrTimeStart) || (t >= P.SocDistTimeStart) || (t >= P.KeyWorkerProphTimeStart)) //changed this to start time geo
@@ -1303,7 +1303,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 						{
 							l = Mcells[b].members[i];
 							if ((!HOST_TO_BE_TREATED(l)) && ((P.TreatPropRadial == 1) || (ranf_mt(tn) < P.TreatPropRadial)))
-								DoProphNoDelay(l, ts, tn, 1, state, P, Hosts);
+								DoProphNoDelay(l, ts, tn, 1, state, P, Hosts, Households);
 						}
 					}
 					if (P.DoGlobalTriggers)
@@ -1388,7 +1388,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 								if (((P.VaccProp == 1) || (ranf_mt(tn) < P.VaccProp)))
 								{
 									//add to the queue
-									DoVaccNoDelay(l,ts, state, P, Hosts);
+									DoVaccNoDelay(l,ts, state, P, Hosts, Households);
 								}
 							}
 							Mcells[b].vacc = 2;
@@ -1488,7 +1488,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 							for (j2 = 0; j2 < P.PlaceTypeNum; j2++)
 								if (j2 != P.HotelPlaceType)
 									for (i2 = 0; i2 < Mcells[b].np[j2]; i2++)
-										DoPlaceOpen(j2, Mcells[b].places[j2][i2], ts, tn, P, Hosts);
+										DoPlaceOpen(j2, Mcells[b].places[j2][i2], ts, tn, P, Hosts, Households);
 						}
 					}
 
@@ -1535,7 +1535,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 									for (j2 = 0; j2 < P.PlaceTypeNum; j2++)
 										if (j2 != P.HotelPlaceType)
 											for (i2 = 0; i2 < Mcells[b].np[j2]; i2++)
-												DoPlaceClose(j2, Mcells[b].places[j2][i2], ts, tn, 1, P, Hosts);
+												DoPlaceClose(j2, Mcells[b].places[j2][i2], ts, tn, 1, P, Hosts, Households);
 								}
 							}
 						}
@@ -1723,7 +1723,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 										{
 											j2 = Mcells[k].members[i2];
 											if ((Hosts[j2].keyworker) && (!HOST_TO_BE_TREATED(j2)))
-												DoProphNoDelay(j2, ts, tn, nckwp, state, P, Hosts);
+												DoProphNoDelay(j2, ts, tn, nckwp, state, P, Hosts, Households);
 										}
 									}
 								}

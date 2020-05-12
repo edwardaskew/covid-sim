@@ -9,7 +9,7 @@
 
 //// Infectiousness functions (House, Place, Spatial, Person). Idea is that in addition to a person's personal infectiousness, they have separate "infectiousnesses" for their house, place and on other cells (spatial). 
 //// These functions consider one person only. A person has an infectiousness that is independent of other people. Slightly different therefore than susceptibility functions. 
-double CalcHouseInf(int j, unsigned short int ts, param const& P, person const* Hosts)
+double CalcHouseInf(int j, unsigned short int ts, param const& P, person const* Hosts, household const * Households)
 {
 	return	((HOST_ISOLATED(j) && (Hosts[j].digitalContactTraced != 1)) ? P.CaseIsolationHouseEffectiveness : 1.0)
 		*	((Hosts[j].digitalContactTraced==1) ? P.DCTCaseIsolationHouseEffectiveness : 1.0)

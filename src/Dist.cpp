@@ -39,7 +39,7 @@ double dist2UTM(double x1, double y1, double x2, double y2, param const& P)
 	y = (1 - x) * asin2sqx[((int)xi)] + x * asin2sqx[((int)xi) + 1];
 	return 4 * EARTHRADIUS * EARTHRADIUS * y;
 }
-double dist2(person* a, person* b, param const& P)
+double dist2(person* a, person* b, param const& P, household const* Households)
 {
 	double x, y;
 
