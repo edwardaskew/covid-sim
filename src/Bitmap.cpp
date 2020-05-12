@@ -35,7 +35,7 @@ struct BitMap
 	void* bmf;
 };
 
-void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state)
+void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state, param const& P)
 {
 	int i, x, y, f, mi;
 	unsigned j;
@@ -114,7 +114,7 @@ void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state)
 	}
 }
 
-void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf)
+void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf, param const& P)
 {
 	char buf[3000], OutF[3000];
 	int j = 0;
@@ -225,7 +225,7 @@ void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf)
 	  fprintf(stderr, "Unknown Bitmap format: %d\n", (int)P.BitmapFormat);
 	}
 }
-void InitBMHead(bitmap_header *& bmh, unsigned char *& bmPixels, unsigned char *& bmp, unsigned char *& bmf)
+void InitBMHead(bitmap_header *& bmh, unsigned char *& bmPixels, unsigned char *& bmp, unsigned char *& bmf, param const& P)
 {
 	int i, j, k, k2, value;
 
@@ -312,7 +312,7 @@ void InitBMHead(bitmap_header *& bmh, unsigned char *& bmPixels, unsigned char *
 #endif
 }
 
-void Bitmap_Finalise()
+void Bitmap_Finalise(param const& P)
 {
   if (P.BitmapFormat == BF_PNG)
   {

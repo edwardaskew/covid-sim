@@ -284,6 +284,4 @@ typedef struct PARAM {
 	int OlderGenGap;
 } param;
 
-extern param P;
-
 #endif // COVIDSIM_PARAM_H_INCLUDED_

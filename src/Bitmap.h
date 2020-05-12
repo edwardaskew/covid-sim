@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "Error.h"
+#include "Param.h"
 
 #ifdef UNIX
 #define DIRECTORY_SEPARATOR "/"
@@ -65,10 +66,10 @@ struct bitmap_state {
 	int32_t* treated;
 };
 
-void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state);
-void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf);
-void InitBMHead(bitmap_header*& bmh, unsigned char*& bmPixels, unsigned char*& bmp, unsigned char*& bmf);
+void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state, param const& P);
+void OutputBitmap(int tp, bitmap_header const* bmh, unsigned char const* bmf, param const& P);
+void InitBMHead(bitmap_header*& bmh, unsigned char*& bmPixels, unsigned char*& bmp, unsigned char*& bmf, param const& P);
 
-void Bitmap_Finalise();
+void Bitmap_Finalise(param const& P);
 
 #endif // COVIDSIM_BITMAP_H_INCLUDED_

@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -184,16 +184,16 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		P.LocationInitialInfection[i][0] -= P.SpatialBoundingBox[0];
 		P.LocationInitialInfection[i][1] -= P.SpatialBoundingBox[1];
 	}
-	t = dist2_raw(0, 0, P.width, P.height);
+	t = dist2_raw(0, 0, P.width, P.height, P);
 	if (P.DoPeriodicBoundaries) t *= 0.25;
 	if (!(nKernel = (double*)calloc(P.NKR + 1, sizeof(double)))) ERR_CRITICAL("Unable to allocate kernel storage\n");
 	if (!(nKernelHR = (double*)calloc(P.NKR + 1, sizeof(double)))) ERR_CRITICAL("Unable to allocate kernel storage\n");
 	P.KernelDelta = t / P.NKR;
 	//	fprintf(stderr,"** %i %lg %lg %lg %lg | %lg %lg %lg %lg \n",P.DoUTM_coords,P.SpatialBoundingBox[0],P.SpatialBoundingBox[1],P.SpatialBoundingBox[2],P.SpatialBoundingBox[3],P.width,P.height,t,P.KernelDelta);
-	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight)));
+	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2, P)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight, P)));
 	t2 = 0.0;
 
-	SetupPopulation(DensityFile, SchoolFile, RegDemogFile);
+	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P);
 	if (!(TimeSeries = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSMeanE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSVarE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
@@ -268,27 +268,27 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		if (!(nEvents = (int*)calloc(1, sizeof(int)))) ERR_CRITICAL("Unable to allocate events storage\n");
 	}
 
-	if(P.OutputNonSeverity) SaveAgeDistrib();
+	if(P.OutputNonSeverity) SaveAgeDistrib(P);
 
 	fprintf(stderr, "Initialising places...\n");
 	if (P.DoPlaces)
 	{
 		if (P.LoadSaveNetwork == 1)
-			LoadPeopleToPlaces(NetworkFile);
+			LoadPeopleToPlaces(NetworkFile, P);
 		else
-			AssignPeopleToPlaces();
+			AssignPeopleToPlaces(P);
 	}
 
 
 	if ((P.DoPlaces) && (P.LoadSaveNetwork == 2))
-		SavePeopleToPlaces(NetworkFile);
+		SavePeopleToPlaces(NetworkFile, P);
 	//SaveDistribs();
 
 	// From here on, we want the same random numbers regardless of whether we used the RNG to make the network,
 	// or loaded the network from a file. Therefore we need to reseed the RNG.
 	setall(&P.nextSetupSeed1, &P.nextSetupSeed2);
 
-	StratifyPlaces();
+	StratifyPlaces(P);
 	for (i = 0; i < P.NC; i++)
 	{
 		Cells[i].S = Cells[i].n;
@@ -304,7 +304,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	P.KernelP3 = P.MoveKernelP3;
 	P.KernelP4 = P.MoveKernelP4;
 	P.KernelType = P.MoveKernelType;
-	InitKernel(0, 1.0);
+	InitKernel(0, 1.0, P);
 
 	if (P.DoPlaces)
 	{
@@ -449,8 +449,8 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	}
 
 
-	UpdateProbs(0);
-	if (P.DoAirports) SetupAirports();
+	UpdateProbs(0, P);
+	if (P.DoAirports) SetupAirports(P);
 	if (P.R0scale != 1.0)
 	{
 		P.HouseholdTrans *= P.R0scale;
@@ -636,11 +636,11 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	PeakHeightSum = PeakHeightSS = PeakTimeSum = PeakTimeSS = 0;
 	i = (P.ncw / 2) * P.nch + P.nch / 2;
 	j = (P.ncw / 2 + 2) * P.nch + P.nch / 2;
-	fprintf(stderr, "UTM dist horiz=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j)), sqrt(dist2_cc(Cells + j, Cells + i)));
+	fprintf(stderr, "UTM dist horiz=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P)), sqrt(dist2_cc(Cells + j, Cells + i, P)));
 	j = (P.ncw / 2) * P.nch + P.nch / 2 + 2;
-	fprintf(stderr, "UTM dist vert=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j)), sqrt(dist2_cc(Cells + j, Cells + i)));
+	fprintf(stderr, "UTM dist vert=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P)), sqrt(dist2_cc(Cells + j, Cells + i, P)));
 	j = (P.ncw / 2 + 2) * P.nch + P.nch / 2 + 2;
-	fprintf(stderr, "UTM dist diag=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j)), sqrt(dist2_cc(Cells + j, Cells + i)));
+	fprintf(stderr, "UTM dist diag=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P)), sqrt(dist2_cc(Cells + j, Cells + i, P)));
 
 	//if(P.OutputBitmap)
 	//{
@@ -650,7 +650,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Model configuration complete.\n");
 }
 
-void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile)
+void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P)
 {
 	int i, j, k, l, m, i2, j2, last_i, mr, ad, tn, *mcl, country;
 	unsigned int rn, rn2;
@@ -1083,7 +1083,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile)
 				m = Hosts[i].listpos;
 				xh = P.mcwidth * (ranf_mt(tn) + x);
 				yh = P.mcheight * (ranf_mt(tn) + y);
-				AssignHouseholdAges(m, i, tn);
+				AssignHouseholdAges(m, i, tn, P);
 				for (i2 = 0; i2 < m; i2++) Hosts[i + i2].listpos = 0;
 				if (P.DoHouseholds)
 				{
@@ -1442,7 +1442,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile)
 	fprintf(stderr, "Assigned hosts to cells\n");
 
 }
-void SetupAirports(void)
+void SetupAirports(param& P)
 {
 	int i, j, k, l, m;
 	double x, y, t, tmin;
@@ -1457,7 +1457,7 @@ void SetupAirports(void)
 	P.KernelShape = P.AirportKernelShape;
 	P.KernelP3 = P.AirportKernelP3;
 	P.KernelP4 = P.AirportKernelP4;
-	InitKernel(1, 1.0);
+	InitKernel(1, 1.0, P);
 	if (!(Airports[0].DestMcells = (indexlist*)calloc(P.NMCP * NNA, sizeof(indexlist)))) ERR_CRITICAL("Unable to allocate airport storage\n");
 	if (!(base = (indexlist*)calloc(P.NMCP * NNA, sizeof(indexlist)))) ERR_CRITICAL("Unable to allocate airport storage\n");
 	for (i = 0; i < P.Nairports; i++) Airports[i].num_mcell = 0;
@@ -1480,7 +1480,7 @@ void SetupAirports(void)
 			for (j = 0; j < P.Nairports; j++)
 				if (Airports[j].total_traffic > 0)
 				{
-					t = numKernel(dist2_raw(x, y, Airports[j].loc_x, Airports[j].loc_y)) * Airports[j].total_traffic;
+					t = numKernel(dist2_raw(x, y, Airports[j].loc_x, Airports[j].loc_y, P), P) * Airports[j].total_traffic;
 					if (k < NNA)
 					{
 						Mcells[i].AirportList[k].id = j;
@@ -1579,7 +1579,7 @@ void SetupAirports(void)
 				Airports[i].num_place = 0;
 				for (j = 0; j < P.Nplace[P.HotelPlaceType]; j++)
 					if (dist2_raw(Airports[i].loc_x, Airports[i].loc_y,
-						Places[P.HotelPlaceType][j].loc_x, Places[P.HotelPlaceType][j].loc_y) < tmin)
+						Places[P.HotelPlaceType][j].loc_x, Places[P.HotelPlaceType][j].loc_y, P) < tmin)
 						Airports[i].num_place++;
 			} while (Airports[i].num_place < m);
 			if (tmin > MAX_DIST_AIRPORT_TO_HOTEL * MAX_DIST_AIRPORT_TO_HOTEL) fprintf(stderr, "*** %i : %lg %i ***\n", i, sqrt(tmin), Airports[i].num_place);
@@ -1587,9 +1587,9 @@ void SetupAirports(void)
 			Airports[i].num_place = 0;
 			for (j = 0; j < P.Nplace[P.HotelPlaceType]; j++)
 				if ((t = dist2_raw(Airports[i].loc_x, Airports[i].loc_y,
-					Places[P.HotelPlaceType][j].loc_x, Places[P.HotelPlaceType][j].loc_y)) < tmin)
+					Places[P.HotelPlaceType][j].loc_x, Places[P.HotelPlaceType][j].loc_y, P)) < tmin)
 				{
-					Airports[i].DestPlaces[Airports[i].num_place].prob = (float)numKernel(t);
+					Airports[i].DestPlaces[Airports[i].num_place].prob = (float)numKernel(t, P);
 					Airports[i].DestPlaces[Airports[i].num_place].id = j;
 					Airports[i].num_place++;
 				}
@@ -1615,14 +1615,14 @@ void SetupAirports(void)
 	P.KernelShape = P.MoveKernelShape;
 	P.KernelP3 = P.MoveKernelP3;
 	P.KernelP4 = P.MoveKernelP4;
-	InitKernel(0, 1.0);
+	InitKernel(0, 1.0, P);
 	fprintf(stderr, "\nAirport initialisation completed successfully\n");
 }
 
 #define PROP_OTHER_PARENT_AWAY 0.0
 
 
-void AssignHouseholdAges(int n, int pers, int tn)
+void AssignHouseholdAges(int n, int pers, int tn, param const& P)
 {
 	/* Complex household age distribution model
 		- picks number of children (nc)
@@ -1794,7 +1794,7 @@ void AssignHouseholdAges(int n, int pers, int tn)
 	for (i = 0; i < n; i++) Hosts[pers + i].age = (unsigned char) a[i];
 }
 
-void AssignPeopleToPlaces(void)
+void AssignPeopleToPlaces(param& P)
 {
 	int i, i2, j, j2, k, k2, l, m, m2, tp, f, f2, f3, f4, ic, mx, my, a, cnt, tn, ca, nt, nn;
 	int* PeopleArray;
@@ -2044,8 +2044,8 @@ void AssignPeopleToPlaces(void)
 				P.KernelShape = P.PlaceTypeKernelShape[tp];
 				P.KernelP3 = P.PlaceTypeKernelP3[tp];
 				P.KernelP4 = P.PlaceTypeKernelP4[tp];
-				InitKernel(1, 1.0);
-				UpdateProbs(1);
+				InitKernel(1, 1.0, P);
+				UpdateProbs(1, P);
 				ca = 0;
 				fprintf(stderr, "Allocating people to place type %i\n", tp);
 				a = cnt;
@@ -2079,8 +2079,8 @@ void AssignPeopleToPlaces(void)
 											{
 												if (Mcells[ic].places[tp][cnt] >= P.Nplace[tp]) fprintf(stderr, "#%i %i %i  ", tp, ic, cnt);
 												t = dist2_raw(Households[Hosts[i].hh].loc_x, Households[Hosts[i].hh].loc_y,
-													Places[tp][Mcells[ic].places[tp][cnt]].loc_x, Places[tp][Mcells[ic].places[tp][cnt]].loc_y);
-												s = numKernel(t);
+													Places[tp][Mcells[ic].places[tp][cnt]].loc_x, Places[tp][Mcells[ic].places[tp][cnt]].loc_y, P);
+												s = numKernel(t, P);
 												if (tp < P.nsp)
 												{
 													t = ((double)Places[tp][Mcells[ic].places[tp][cnt]].treat_end_time);
@@ -2183,7 +2183,7 @@ void AssignPeopleToPlaces(void)
 					f = k2;
 					for (ic = 0; ic <= 30; ic++)
 					{
-						UpdateProbs(1);
+						UpdateProbs(1, P);
 						m2 = f - 1;
 						if (ic < 9)
 							f = 100 * (9 - ic) * a;
@@ -2230,8 +2230,8 @@ void AssignPeopleToPlaces(void)
 										fprintf(stderr, "*%i %i: %i %i\n", k, tp, j, P.Nplace[tp]);
 										ERR_CRITICAL("Out of bounds place link\n");
 									}
-									t = dist2_raw(Households[Hosts[k].hh].loc_x, Households[Hosts[k].hh].loc_y, Places[tp][j].loc_x, Places[tp][j].loc_y);
-									s = ((double)ct->S) / ((double)ct->S0) * numKernel(t) / Cells[i].max_trans[l];
+									t = dist2_raw(Households[Hosts[k].hh].loc_x, Households[Hosts[k].hh].loc_y, Places[tp][j].loc_x, Places[tp][j].loc_y, P);
+									s = ((double)ct->S) / ((double)ct->S0) * numKernel(t, P) / Cells[i].max_trans[l];
 									if ((P.DoAdUnits) && (P.InhibitInterAdunitPlaceAssignment[tp] > 0))
 									{
 										if (Mcells[Hosts[k].mcell].adunit != Mcells[Places[tp][j].mcell].adunit) s *= (1 - P.InhibitInterAdunitPlaceAssignment[tp]);
@@ -2281,7 +2281,7 @@ void AssignPeopleToPlaces(void)
 	}
 
 }
-void StratifyPlaces(void)
+void StratifyPlaces(param const& P)
 {
 	int i, j, k, l, m, n, tn;
 	double t;
@@ -2414,7 +2414,7 @@ void StratifyPlaces(void)
 		*/
 	}
 }
-void LoadPeopleToPlaces(char* NetworkFile)
+void LoadPeopleToPlaces(char* NetworkFile, param const& P)
 {
 	int i, j, k, l, m, n, npt, i2;
 	long s1, s2;
@@ -2469,7 +2469,7 @@ void LoadPeopleToPlaces(char* NetworkFile)
 	*/	fprintf(stderr, "\n");
 	fclose(dat);
 }
-void SavePeopleToPlaces(char* NetworkFile)
+void SavePeopleToPlaces(char* NetworkFile, param const& P)
 {
 	int i, j, npt;
 	FILE* dat;
@@ -2504,7 +2504,7 @@ void SavePeopleToPlaces(char* NetworkFile)
 	fclose(dat);
 }
 
-void SaveAgeDistrib(void)
+void SaveAgeDistrib(param const& P)
 {
 	int i;
 	FILE* dat;

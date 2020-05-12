@@ -11,12 +11,12 @@
 #include "Rand.h"
 
 //adding function to record an event: ggilani - 10/10/2014
-void RecordEvent(double, int, int, int, int); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
+void RecordEvent(double, int, int, int, int, param const& P); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
 
-unsigned short int ChooseFromICDF(double *, double, int);
-int ChooseFinalDiseaseSeverity(int, int);
+unsigned short int ChooseFromICDF(double const *, double, int, param const& P);
+int ChooseFinalDiseaseSeverity(int, int, param const& P);
 
-void DoImmune(int ai, bitmap_state const* state)
+void DoImmune(int ai, bitmap_state const* state, param const& P)
 {
 	// This transfers a person straight from susceptible to immune. Used to start a run with a partially immune population.
 	person* a;
@@ -68,7 +68,7 @@ void DoImmune(int ai, bitmap_state const* state)
 		}
 	}
 }
-void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
+void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
 {
 	///// This updates a number of things concerning person ai (and their contacts/infectors/places etc.) at time t in thread tn for this run.
 	int i;
@@ -144,19 +144,19 @@ void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state) // C
 		{
 			if (*nEvents < P.MaxInfEvents)
 			{
-				RecordEvent(t, ai, run, 0, tn); //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
+				RecordEvent(t, ai, run, 0, tn, P); //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
 			}
 		}
 		if ((t > 0) && (P.DoOneGen))
 		{
-			DoIncub(ai, ts, tn, run);
-			DoCase(ai, t, ts, tn, state);
-			DoRecover(ai, tn, run, state);
+			DoIncub(ai, ts, tn, run, P);
+			DoCase(ai, t, ts, tn, state, P);
+			DoRecover(ai, tn, run, state, P);
 		}
 	}
 }
 
-void RecordEvent(double t, int ai, int run, int type, int tn) //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
+void RecordEvent(double t, int ai, int run, int type, int tn, param const& P) //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
 {
 	/* Function: RecordEvent(t, ai)
 	 * Records an infection event in the event log
@@ -217,7 +217,7 @@ void RecordEvent(double t, int ai, int run, int type, int tn) //added int as arg
 
 }
 
-void DoMild(int ai, int tn)
+void DoMild(int ai, int tn, param const& P)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -235,7 +235,7 @@ void DoMild(int ai, int tn)
 		}
 	}
 }
-void DoILI(int ai, int tn)
+void DoILI(int ai, int tn, param const& P)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -253,7 +253,7 @@ void DoILI(int ai, int tn)
 		}
 	}
 }
-void DoSARI(int ai, int tn)
+void DoSARI(int ai, int tn, param const& P)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -274,7 +274,7 @@ void DoSARI(int ai, int tn)
 		}
 	}
 }
-void DoCritical(int ai, int tn)
+void DoCritical(int ai, int tn, param const& P)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -295,7 +295,7 @@ void DoCritical(int ai, int tn)
 		}
 	}
 }
-void DoRecoveringFromCritical(int ai, int tn)
+void DoRecoveringFromCritical(int ai, int tn, param const& P)
 {
 	//// note function different from DoRecover_FromSeverity.
 	//// DoRecover_FromSeverity assigns people to state Recovered (and bookkeeps accordingly).
@@ -319,7 +319,7 @@ void DoRecoveringFromCritical(int ai, int tn)
 		}
 	}
 }
-void DoDeath_FromCriticalorSARIorILI(int ai, int tn)
+void DoDeath_FromCriticalorSARIorILI(int ai, int tn, param const& P)
 {
 	person* a = Hosts + ai;
 	if (P.DoSeverity)
@@ -362,7 +362,7 @@ void DoDeath_FromCriticalorSARIorILI(int ai, int tn)
 		}
 	}
 }
-void DoRecover_FromSeverity(int ai, int tn)
+void DoRecover_FromSeverity(int ai, int tn, param const& P)
 {
 	//// note function different from DoRecoveringFromCritical.
 	//// DoRecover_FromSeverity assigns people to state Recovered (and bookkeeps accordingly).
@@ -405,7 +405,7 @@ void DoRecover_FromSeverity(int ai, int tn)
 		}
 }
 
-void DoIncub(int ai, unsigned short int ts, int tn, int run)
+void DoIncub(int ai, unsigned short int ts, int tn, int run, param const& P)
 {
 	person* a;
 	double q;
@@ -435,14 +435,14 @@ void DoIncub(int ai, unsigned short int ts, int tn, int run)
 		if (!P.DoSeverity || a->inf == InfStat_InfectiousAsymptomaticNotCase) //// if not doing severity or if person asymptomatic.
 		{
 			if (P.DoInfectiousnessProfile)	a->recovery_or_death_time = a->latent_time + (unsigned short int) (P.InfectiousPeriod * P.TimeStepsPerDay);
-			else							a->recovery_or_death_time = a->latent_time + ChooseFromICDF(P.infectious_icdf, P.InfectiousPeriod, tn);
+			else							a->recovery_or_death_time = a->latent_time + ChooseFromICDF(P.infectious_icdf, P.InfectiousPeriod, tn, P);
 		}
 		else
 		{
 			int CaseTime = a->latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep)); //// base severity times on CaseTime, not latent time. Otherwise there are edge cases where recovery time is zero days after latent_time and therefore before DoCase called in IncubRecoverySweep (i.e. people can recover before they've become a case!).
 
 			//// choose final disease severity (either mild, ILI, SARI, Critical, not asymptomatic as covered above) by age
-			a->Severity_Final = ChooseFinalDiseaseSeverity(age, tn);
+			a->Severity_Final = ChooseFinalDiseaseSeverity(age, tn, P);
 
 			/// choose outcome recovery or death
 			if (	((a->Severity_Final == Severity_Critical)	&& (ranf_mt(tn) < P.CFR_Critical_ByAge	[age]))		||
@@ -452,33 +452,33 @@ void DoIncub(int ai, unsigned short int ts, int tn, int run)
 
 			//// choose events and event times
 			if (a->Severity_Final == Severity_Mild)
-				a->recovery_or_death_time = CaseTime + ChooseFromICDF(P.MildToRecovery_icdf, P.Mean_MildToRecovery, tn);
+				a->recovery_or_death_time = CaseTime + ChooseFromICDF(P.MildToRecovery_icdf, P.Mean_MildToRecovery, tn, P);
 			else if (a->Severity_Final == Severity_Critical)
 			{
-				a->SARI_time		= CaseTime		+ ChooseFromICDF(P.ILIToSARI_icdf		, P.Mean_ILIToSARI		, tn);
-				a->Critical_time	= a->SARI_time	+ ChooseFromICDF(P.SARIToCritical_icdf	, P.Mean_SARIToCritical	, tn);
+				a->SARI_time		= CaseTime		+ ChooseFromICDF(P.ILIToSARI_icdf		, P.Mean_ILIToSARI		, tn, P);
+				a->Critical_time	= a->SARI_time	+ ChooseFromICDF(P.SARIToCritical_icdf	, P.Mean_SARIToCritical	, tn, P);
 				if (a->to_die)
-					a->recovery_or_death_time = a->Critical_time					+ ChooseFromICDF(P.CriticalToDeath_icdf		, P.Mean_CriticalToDeath	, tn);
+					a->recovery_or_death_time = a->Critical_time					+ ChooseFromICDF(P.CriticalToDeath_icdf		, P.Mean_CriticalToDeath	, tn, P);
 				else
 				{
-					a->RecoveringFromCritical_time	= a->Critical_time					+ ChooseFromICDF(P.CriticalToCritRecov_icdf	, P.Mean_CriticalToCritRecov, tn);
-					a->recovery_or_death_time		= a->RecoveringFromCritical_time	+ ChooseFromICDF(P.CritRecovToRecov_icdf	, P.Mean_CritRecovToRecov	, tn);
+					a->RecoveringFromCritical_time	= a->Critical_time					+ ChooseFromICDF(P.CriticalToCritRecov_icdf	, P.Mean_CriticalToCritRecov, tn, P);
+					a->recovery_or_death_time		= a->RecoveringFromCritical_time	+ ChooseFromICDF(P.CritRecovToRecov_icdf	, P.Mean_CritRecovToRecov	, tn, P);
 				}
 			}
 			else if (a->Severity_Final == Severity_SARI)
 			{
-				a->SARI_time = CaseTime + ChooseFromICDF(P.ILIToSARI_icdf, P.Mean_ILIToSARI, tn);
+				a->SARI_time = CaseTime + ChooseFromICDF(P.ILIToSARI_icdf, P.Mean_ILIToSARI, tn, P);
 				if (a->to_die)
-					a->recovery_or_death_time = a->SARI_time + ChooseFromICDF(P.SARIToDeath_icdf	, P.Mean_SARIToDeath	, tn);
+					a->recovery_or_death_time = a->SARI_time + ChooseFromICDF(P.SARIToDeath_icdf	, P.Mean_SARIToDeath	, tn, P);
 				else
-					a->recovery_or_death_time = a->SARI_time + ChooseFromICDF(P.SARIToRecovery_icdf	, P.Mean_SARIToRecovery	, tn);
+					a->recovery_or_death_time = a->SARI_time + ChooseFromICDF(P.SARIToRecovery_icdf	, P.Mean_SARIToRecovery	, tn, P);
 			}
 			else /*i.e. if Severity_Final == Severity_ILI*/
 			{
 				if (a->to_die)
-					a->recovery_or_death_time = CaseTime + ChooseFromICDF(P.ILIToDeath_icdf		, P.Mean_ILIToDeath		, tn);
+					a->recovery_or_death_time = CaseTime + ChooseFromICDF(P.ILIToDeath_icdf		, P.Mean_ILIToDeath		, tn, P);
 				else
-					a->recovery_or_death_time = CaseTime + ChooseFromICDF(P.ILIToRecovery_icdf	, P.Mean_ILIToRecovery	, tn);
+					a->recovery_or_death_time = CaseTime + ChooseFromICDF(P.ILIToRecovery_icdf	, P.Mean_ILIToRecovery	, tn, P);
 			}
 		}
 
@@ -511,7 +511,7 @@ void DoIncub(int ai, unsigned short int ts, int tn, int run)
 	}
 }
 
-void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state)
+void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state, param const& P)
 {
 	//// Function DoDetectedCase does many things associated with various interventions.
 	//// Enacts Household quarantine, case isolation, place closure.
@@ -537,7 +537,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 			for (j = 0; j < P.PlaceTypeNum; j++)
 				if ((j != P.HotelPlaceType) && (a->PlaceLinks[j] >= 0))
 				{
-					DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0);
+					DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0, P);
 					if (!P.PlaceCloseRoundHousehold)
 					{
 						if (Mcells[Places[j][a->PlaceLinks[j]].mcell].place_trig < USHRT_MAX - 1)
@@ -552,14 +552,14 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 	if (t >= P.TreatTimeStart)
 		if ((P.TreatPropCases == 1) || (ranf_mt(tn) < P.TreatPropCases))
 		{
-			DoTreatCase(ai, ts, tn, state);
+			DoTreatCase(ai, ts, tn, state, P);
 			if (P.DoHouseholds)
 			{
 				if ((t < P.TreatTimeStart + P.TreatHouseholdsDuration) && ((P.TreatPropCaseHouseholds == 1) || (ranf_mt(tn) < P.TreatPropCaseHouseholds)))
 				{
 					j1 = Households[Hosts[ai].hh].FirstPerson; j2 = j1 + Households[Hosts[ai].hh].nh;
 					for (j = j1; j < j2; j++)
-						if (!HOST_TO_BE_TREATED(j)) DoProph(j, ts, tn, state);
+						if (!HOST_TO_BE_TREATED(j)) DoProph(j, ts, tn, state, P);
 				}
 			}
 			if (P.DoPlaces)
@@ -598,7 +598,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 			if ((t < P.VaccTimeStart + P.VaccHouseholdsDuration) && ((P.VaccPropCaseHouseholds == 1) || (ranf_mt(tn) < P.VaccPropCaseHouseholds)))
 			{
 				j1 = Households[Hosts[ai].hh].FirstPerson; j2 = j1 + Households[Hosts[ai].hh].nh;
-				for (j = j1; j < j2; j++) DoVacc(j, ts, state);
+				for (j = j1; j < j2; j++) DoVacc(j, ts, state, P);
 			}
 
 		//// Giant compound if statement. If doing delays by admin unit, then window of HQuarantine dependent on admin unit-specific duration. This if statement ensures that this timepoint within window, regardless of how window defined.
@@ -769,7 +769,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 
 }
 
-void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state) //// makes an infectious (but asymptomatic) person symptomatic. Called in IncubRecoverySweep (and DoInfect if P.DoOneGen)
+void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state, param const& P) //// makes an infectious (but asymptomatic) person symptomatic. Called in IncubRecoverySweep (and DoInfect if P.DoOneGen)
 {
 	int j, k, f, j1, j2;
 	person* a;
@@ -795,7 +795,7 @@ void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const*
 							if ((t >= P.PlaceCloseTimeStart) && (!P.DoAdminTriggers) && (!P.DoGlobalTriggers))
 								for (j = 0; j < P.PlaceTypeNum; j++)
 									if ((j != P.HotelPlaceType) && (a->PlaceLinks[j] >= 0))
-											DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0);
+											DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0, P);
 						}
 
 						if ((!HOST_QUARANTINED(ai)) && (Hosts[ai].PlaceLinks[P.PlaceTypeNoAirNum - 1] >= 0) && (HOST_AGE_YEAR(ai) >= P.CaseAbsentChildAgeCutoff))
@@ -834,7 +834,7 @@ void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const*
 		{
 			StateT[tn].cumDC++;
 			StateT[tn].cumDC_adunit[Mcells[a->mcell].adunit]++;
-			DoDetectedCase(ai, t, ts, tn, state);
+			DoDetectedCase(ai, t, ts, tn, state, P);
 			//add detection time
 
 		}
@@ -849,26 +849,26 @@ void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const*
 		if (P.DoSeverity)
 		{
 			if (a->Severity_Final == Severity_Mild)
-				DoMild(ai, tn);
+				DoMild(ai, tn, P);
 			else
-				DoILI(ai, tn); //// symptomatic cases either mild or ILI at symptom onset. SARI and Critical cases still onset with ILI.
+				DoILI(ai, tn, P); //// symptomatic cases either mild or ILI at symptom onset. SARI and Critical cases still onset with ILI.
 		}
 		if (P.DoAdUnits) StateT[tn].cumC_adunit[Mcells[a->mcell].adunit]++;
 	}
 }
 
-void DoFalseCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const *state)
+void DoFalseCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const *state, param const& P)
 {
 	/* Arguably adult absenteeism to take care of sick kids could be included here, but then output absenteeism would not be 'excess' absenteeism */
 	if ((P.ControlPropCasesId == 1) || (ranf_mt(tn) < P.ControlPropCasesId))
 	{
 		if ((!P.DoEarlyCaseDiagnosis) || (State.cumDC >= P.PreControlClusterIdCaseThreshold)) StateT[tn].cumDC++;
-		DoDetectedCase(ai, t, ts, tn, state);
+		DoDetectedCase(ai, t, ts, tn, state, P);
 	}
 	StateT[tn].cumFC++;
 }
 
-void DoRecover(int ai, int tn, int run, bitmap_state const* state)
+void DoRecover(int ai, int tn, int run, bitmap_state const* state, param const& P)
 {
 	int i, j, x, y;
 	person* a;
@@ -913,7 +913,7 @@ void DoRecover(int ai, int tn, int run, bitmap_state const* state)
 	//fprintf(stderr, "\n ### %i %i  \n", ai, a->inf);
 }
 
-void DoDeath(int ai, int tn, int run, bitmap_state const* state)
+void DoDeath(int ai, int tn, int run, bitmap_state const* state, param const& P)
 {
 	int i, x, y;
 	person* a = Hosts + ai;
@@ -957,7 +957,7 @@ void DoDeath(int ai, int tn, int run, bitmap_state const* state)
 	}
 }
 
-void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *state)
+void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *state, param const& P)
 {
 	int x, y;
 
@@ -993,7 +993,7 @@ void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *stat
 	}
 }
 
-void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state)
+void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state, param const& P)
 {
 	//// almost identical to DoProphNoDelay, except unsurprisingly this function includes delay between timestep and start of treatment. Also increments StateT[tn].cumT_keyworker by 1 every time.
 	int x, y;
@@ -1025,7 +1025,7 @@ void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state)
 	}
 }
 
-void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state const* state)
+void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state const* state, param const& P)
 {
 	int x, y;
 
@@ -1056,7 +1056,7 @@ void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state 
 	}
 }
 
-void DoPlaceClose(int i, int j, unsigned short int ts, int tn, int DoAnyway)
+void DoPlaceClose(int i, int j, unsigned short int ts, int tn, int DoAnyway, param const& P)
 {
 	//// DoPlaceClose function called in TreatSweep (with arg DoAnyway = 1) and DoDetectedCase (with arg DoAnyway = 0).
 	//// Basic pupose of this function is to change Places[i][j].close_start_time and Places[i][j].close_end_time, so that macro PLACE_CLOSED will return true.
@@ -1197,7 +1197,7 @@ void DoPlaceClose(int i, int j, unsigned short int ts, int tn, int DoAnyway)
 	}
 }
 
-void DoPlaceOpen(int i, int j, unsigned short int ts, int tn)
+void DoPlaceOpen(int i, int j, unsigned short int ts, int tn, param const& P)
 {
 	int k, ai, j1, j2, l, f, m;
 
@@ -1234,7 +1234,7 @@ void DoPlaceOpen(int i, int j, unsigned short int ts, int tn)
 	}
 }
 
-int DoVacc(int ai, unsigned short int ts, bitmap_state const* state)
+int DoVacc(int ai, unsigned short int ts, bitmap_state const* state, param const& P)
 {
 	int x, y;
 
@@ -1273,7 +1273,7 @@ int DoVacc(int ai, unsigned short int ts, bitmap_state const* state)
 	return 0;
 }
 
-void DoVaccNoDelay(int ai, unsigned short int ts, bitmap_state const* state)
+void DoVaccNoDelay(int ai, unsigned short int ts, bitmap_state const* state, param const& P)
 {
 	int x, y;
 
@@ -1307,7 +1307,7 @@ void DoVaccNoDelay(int ai, unsigned short int ts, bitmap_state const* state)
 }
 
 ///// Change person status functions (e.g. change person from susceptible to latently infected).
-int ChooseFinalDiseaseSeverity(int AgeGroup, int tn)
+int ChooseFinalDiseaseSeverity(int AgeGroup, int tn, param const& P)
 {
 	int DiseaseSeverity;
 	double x;
@@ -1322,7 +1322,7 @@ int ChooseFinalDiseaseSeverity(int AgeGroup, int tn)
 	return DiseaseSeverity;
 }
 
-unsigned short int ChooseFromICDF(double *ICDF, double Mean, int tn)
+unsigned short int ChooseFromICDF(double const* ICDF, double Mean, int tn, param const& P)
 {
 	unsigned short int Value;
 	int i;

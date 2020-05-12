@@ -2,12 +2,14 @@
 #define COVIDSIM_DIST_H_INCLUDED_
 
 #include "Model.h"
+#include "Param.h"
+
 extern double sinx[361], cosx[361], asin2sqx[1001];
-double dist2UTM(double, double, double, double);
-double dist2(person*, person*);
-double dist2_cc(cell*, cell*);
-double dist2_cc_min(cell*, cell*);
-double dist2_mm(microcell*, microcell*);
-double dist2_raw(double, double, double, double);
+double dist2UTM(double, double, double, double, param const& P);
+double dist2(person*, person*, param const& P);
+double dist2_cc(cell*, cell*, param const& P);
+double dist2_cc_min(cell*, cell*, param const& P);
+double dist2_mm(microcell*, microcell*, param const& P);
+double dist2_raw(double, double, double, double, param const& P);
 
 #endif // COVIDSIM_DIST_H_INCLUDED_

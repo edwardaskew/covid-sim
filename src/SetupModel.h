@@ -1,16 +1,16 @@
 #ifndef COVIDSIM_SETUPMODEL_H_INCLUDED_
 #define COVIDSIM_SETUPMODEL_H_INCLUDED_
 
-void SetupModel(char*, char*, char*, char*);
-void SetupPopulation(char*, char*, char*);
-void SetupAirports(void);
-void AssignHouseholdAges(int, int, int);
-void AssignPeopleToPlaces(void);
-void StratifyPlaces(void);
-void LoadPeopleToPlaces(char*);
-void SavePeopleToPlaces(char*);
-void SaveAgeDistrib(void);
-void UpdateProbs(int);
+void SetupModel(char*, char*, char*, char*, param& P);
+void SetupPopulation(char*, char*, char*, param& P);
+void SetupAirports(param& P);
+void AssignHouseholdAges(int, int, int, param const& P);
+void AssignPeopleToPlaces(param& P);
+void StratifyPlaces(param const& P);
+void LoadPeopleToPlaces(char*, param const& P);
+void SavePeopleToPlaces(char*, param const& P);
+void SaveAgeDistrib(param const& P);
+void UpdateProbs(int, param const& P);
 
 // network file format version; update this number when you make changes to the format of the
 // network file, to ensure old/incompatible files are not loaded.

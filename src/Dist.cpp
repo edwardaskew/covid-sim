@@ -11,7 +11,7 @@ double sinx[361], cosx[361], asin2sqx[1001];
 //// **** DISTANCE FUNCTIONS (return distance-squared, which is input for every Kernel function)
 //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** 
 
-double dist2UTM(double x1, double y1, double x2, double y2)
+double dist2UTM(double x1, double y1, double x2, double y2, param const& P)
 {
 	double x, y, cy1, cy2, yt, xi, yi;
 
@@ -39,12 +39,12 @@ double dist2UTM(double x1, double y1, double x2, double y2)
 	y = (1 - x) * asin2sqx[((int)xi)] + x * asin2sqx[((int)xi) + 1];
 	return 4 * EARTHRADIUS * EARTHRADIUS * y;
 }
-double dist2(person* a, person* b)
+double dist2(person* a, person* b, param const& P)
 {
 	double x, y;
 
 	if (P.DoUTM_coords)
-		return dist2UTM(Households[a->hh].loc_x, Households[a->hh].loc_y, Households[b->hh].loc_x, Households[b->hh].loc_y);
+		return dist2UTM(Households[a->hh].loc_x, Households[a->hh].loc_y, Households[b->hh].loc_x, Households[b->hh].loc_y, P);
 	else
 	{
 		x = fabs(Households[a->hh].loc_x - Households[b->hh].loc_x);
@@ -57,7 +57,7 @@ double dist2(person* a, person* b)
 		return x * x + y * y;
 	}
 }
-double dist2_cc(cell* a, cell* b)
+double dist2_cc(cell* a, cell* b, param const& P)
 {
 	double x, y;
 	int l, m;
@@ -66,7 +66,7 @@ double dist2_cc(cell* a, cell* b)
 	m = (int)(b - Cells);
 	if (P.DoUTM_coords)
 		return dist2UTM(P.cwidth * fabs((double)(l / P.nch)), P.cheight * fabs((double)(l % P.nch)),
-			P.cwidth * fabs((double)(m / P.nch)), P.cheight * fabs((double)(m % P.nch)));
+			P.cwidth * fabs((double)(m / P.nch)), P.cheight * fabs((double)(m % P.nch)), P);
 	else
 	{
 		x = P.cwidth * fabs((double)(l / P.nch - m / P.nch));
@@ -79,7 +79,7 @@ double dist2_cc(cell* a, cell* b)
 		return x * x + y * y;
 	}
 }
-double dist2_cc_min(cell* a, cell* b)
+double dist2_cc_min(cell* a, cell* b, param const& P)
 {
 	double x, y;
 	int l, m, i, j;
@@ -108,7 +108,7 @@ double dist2_cc_min(cell* a, cell* b)
 		else if (m % P.nch < l % P.nch)
 			j++;
 		return dist2UTM(P.cwidth * fabs((double)(i / P.nch)), P.cheight * fabs((double)(i % P.nch)),
-			P.cwidth * fabs((double)(j / P.nch)), P.cheight * fabs((double)(j % P.nch)));
+			P.cwidth * fabs((double)(j / P.nch)), P.cheight * fabs((double)(j % P.nch)), P);
 	}
 	else
 	{
@@ -150,7 +150,7 @@ double dist2_cc_min(cell* a, cell* b)
 		return x * x + y * y;
 	}
 }
-double dist2_mm(microcell* a, microcell* b)
+double dist2_mm(microcell* a, microcell* b, param const& P)
 {
 	double x, y;
 	int l, m;
@@ -159,7 +159,7 @@ double dist2_mm(microcell* a, microcell* b)
 	m = (int)(b - Mcells);
 	if (P.DoUTM_coords)
 		return dist2UTM(P.mcwidth * fabs((double)(l / P.nmch)), P.mcheight * fabs((double)(l % P.nmch)),
-			P.mcwidth * fabs((double)(m / P.nmch)), P.mcheight * fabs((double)(m % P.nmch)));
+			P.mcwidth * fabs((double)(m / P.nmch)), P.mcheight * fabs((double)(m % P.nmch)), P);
 	else
 	{
 		x = P.mcwidth * fabs((double)(l / P.nmch - m / P.nmch));
@@ -173,12 +173,12 @@ double dist2_mm(microcell* a, microcell* b)
 	}
 }
 
-double dist2_raw(double ax, double ay, double bx, double by)
+double dist2_raw(double ax, double ay, double bx, double by, param const& P)
 {
 	double x, y;
 
 	if (P.DoUTM_coords)
-		return dist2UTM(ax, ay, bx, by);
+		return dist2UTM(ax, ay, bx, by, P);
 	else
 	{
 		x = fabs(ax - bx);

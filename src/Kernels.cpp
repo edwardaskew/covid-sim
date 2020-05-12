@@ -23,10 +23,10 @@
 //          nKernel[0]   ... nKernel[P.NKR / P.NK_HR] ... nKernel[P.NKR]
 //          nKernelHR[0] ... nKernelHR[P.NKR]
 double *nKernel, *nKernelHR;
-void InitKernel(int DoPlaces, double norm)
+void InitKernel(int DoPlaces, double norm, param const& P)
 {
 	int i, j;
-	double(*Kernel)(double);
+	double(*Kernel)(double, param const& P);
 
 	if (P.KernelType == 1)
 		Kernel = ExpKernel;
@@ -47,8 +47,8 @@ void InitKernel(int DoPlaces, double norm)
 #pragma omp parallel for private(i) schedule(static,500) //added private i
 	for (i = 0; i <= P.NKR; i++)
 	{
-		nKernel[i] = (*Kernel)(((double)i) * P.KernelDelta) / norm;
-		nKernelHR[i] = (*Kernel)(((double)i) * P.KernelDelta / P.NK_HR) / norm;
+		nKernel[i] = (*Kernel)(((double)i) * P.KernelDelta, P) / norm;
+		nKernelHR[i] = (*Kernel)(((double)i) * P.KernelDelta / P.NK_HR, P) / norm;
 	}
 
 #pragma omp parallel for schedule(static,500) private(i,j)
@@ -59,7 +59,7 @@ void InitKernel(int DoPlaces, double norm)
 		for (j = 0; j < P.NCP; j++)
 		{
 			cell *m = CellLookup[j];
-			l->tot_prob += (l->max_trans[j] = (float)numKernel(dist2_cc_min(l, m))) * m->n;
+			l->tot_prob += (l->max_trans[j] = (float)numKernel(dist2_cc_min(l, m, P), P)) * m->n;
 		}
 	}
 }
@@ -67,11 +67,11 @@ void InitKernel(int DoPlaces, double norm)
 //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// ****
 //// **** KERNEL DEFINITIONS
 
-double ExpKernel(double r2)
+double ExpKernel(double r2, param const& P)
 {
 	return exp(-sqrt(r2) / P.KernelScale);
 }
-double PowerKernel(double r2)
+double PowerKernel(double r2, param const& P)
 {
 	double t;
 
@@ -79,7 +79,7 @@ double PowerKernel(double r2)
 
 	return (t < -690) ? 0 : exp(t);
 }
-double PowerKernelB(double r2)
+double PowerKernelB(double r2, param const& P)
 {
 	double t;
 
@@ -87,7 +87,7 @@ double PowerKernelB(double r2)
 
 	return (t > 690) ? 0 : (1 / (exp(t) + 1));
 }
-double PowerKernelUS(double r2)
+double PowerKernelUS(double r2, param const& P)
 {
 	double t;
 
@@ -95,15 +95,15 @@ double PowerKernelUS(double r2)
 
 	return (t < -690) ? 0 : (exp(-P.KernelShape * t) + P.KernelP3 * exp(-P.KernelP4 * t)) / (1 + P.KernelP3);
 }
-double GaussianKernel(double r2)
+double GaussianKernel(double r2, param const& P)
 {
 	return exp(-r2 / (P.KernelScale * P.KernelScale));
 }
-double StepKernel(double r2)
+double StepKernel(double r2, param const& P)
 {
 	return (r2 > P.KernelScale * P.KernelScale) ? 0 : 1;
 }
-double PowerExpKernel(double r2)
+double PowerExpKernel(double r2, param const& P)
 {
 	double d, t;
 
@@ -112,7 +112,7 @@ double PowerExpKernel(double r2)
 
 	return (t < -690) ? 0 : exp(t - pow(d / P.KernelP3, P.KernelP4));
 }
-double numKernel(double r2)
+double numKernel(double r2, param const& P)
 {
 	double t, s;
 
