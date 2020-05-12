@@ -68,7 +68,7 @@ void DoImmune(int ai, bitmap_state const* state, param const& P, person* Hosts, 
 		}
 	}
 }
-void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
+void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
 {
 	///// This updates a number of things concerning person ai (and their contacts/infectors/places etc.) at time t in thread tn for this run.
 	int i;
@@ -150,7 +150,7 @@ void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, para
 		if ((t > 0) && (P.DoOneGen))
 		{
 			DoIncub(ai, ts, tn, run, P, Hosts);
-			DoCase(ai, t, ts, tn, state, P, Hosts, Households, State);
+			DoCase(ai, t, ts, tn, state, P, Hosts, Households, State, StateT);
 			DoRecover(ai, tn, run, state, P, Hosts, Households);
 		}
 	}
@@ -217,7 +217,7 @@ void RecordEvent(double t, int ai, int run, int type, int tn, param const& P, pe
 
 }
 
-void DoMild(int ai, int tn, param const& P, person* Hosts)
+void DoMild(int ai, int tn, param const& P, person* Hosts, popvar* StateT)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -235,7 +235,7 @@ void DoMild(int ai, int tn, param const& P, person* Hosts)
 		}
 	}
 }
-void DoILI(int ai, int tn, param const& P, person* Hosts)
+void DoILI(int ai, int tn, param const& P, person* Hosts, popvar* StateT)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -253,7 +253,7 @@ void DoILI(int ai, int tn, param const& P, person* Hosts)
 		}
 	}
 }
-void DoSARI(int ai, int tn, param const& P, person* Hosts)
+void DoSARI(int ai, int tn, param const& P, person* Hosts, popvar* StateT)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -274,7 +274,7 @@ void DoSARI(int ai, int tn, param const& P, person* Hosts)
 		}
 	}
 }
-void DoCritical(int ai, int tn, param const& P, person* Hosts)
+void DoCritical(int ai, int tn, param const& P, person* Hosts, popvar* StateT)
 {
 	if (P.DoSeverity) //// shouldn't need this but best be careful.
 	{
@@ -295,7 +295,7 @@ void DoCritical(int ai, int tn, param const& P, person* Hosts)
 		}
 	}
 }
-void DoRecoveringFromCritical(int ai, int tn, param const& P, person * Hosts)
+void DoRecoveringFromCritical(int ai, int tn, param const& P, person * Hosts, popvar* StateT)
 {
 	//// note function different from DoRecover_FromSeverity.
 	//// DoRecover_FromSeverity assigns people to state Recovered (and bookkeeps accordingly).
@@ -319,7 +319,7 @@ void DoRecoveringFromCritical(int ai, int tn, param const& P, person * Hosts)
 		}
 	}
 }
-void DoDeath_FromCriticalorSARIorILI(int ai, int tn, param const& P, person* Hosts)
+void DoDeath_FromCriticalorSARIorILI(int ai, int tn, param const& P, person* Hosts, popvar* StateT)
 {
 	person* a = Hosts + ai;
 	if (P.DoSeverity)
@@ -362,7 +362,7 @@ void DoDeath_FromCriticalorSARIorILI(int ai, int tn, param const& P, person* Hos
 		}
 	}
 }
-void DoRecover_FromSeverity(int ai, int tn, param const& P, person* Hosts)
+void DoRecover_FromSeverity(int ai, int tn, param const& P, person* Hosts, popvar* StateT)
 {
 	//// note function different from DoRecoveringFromCritical.
 	//// DoRecover_FromSeverity assigns people to state Recovered (and bookkeeps accordingly).
@@ -511,7 +511,7 @@ void DoIncub(int ai, unsigned short int ts, int tn, int run, param const& P, per
 	}
 }
 
-void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State)
+void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT)
 {
 	//// Function DoDetectedCase does many things associated with various interventions.
 	//// Enacts Household quarantine, case isolation, place closure.
@@ -537,7 +537,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 			for (j = 0; j < P.PlaceTypeNum; j++)
 				if ((j != P.HotelPlaceType) && (a->PlaceLinks[j] >= 0))
 				{
-					DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0, P, Hosts, Households);
+					DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0, P, Hosts, Households, StateT);
 					if (!P.PlaceCloseRoundHousehold)
 					{
 						if (Mcells[Places[j][a->PlaceLinks[j]].mcell].place_trig < USHRT_MAX - 1)
@@ -552,14 +552,14 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 	if (t >= P.TreatTimeStart)
 		if ((P.TreatPropCases == 1) || (ranf_mt(tn) < P.TreatPropCases))
 		{
-			DoTreatCase(ai, ts, tn, state, P, Hosts, Households, State);
+			DoTreatCase(ai, ts, tn, state, P, Hosts, Households, State, StateT);
 			if (P.DoHouseholds)
 			{
 				if ((t < P.TreatTimeStart + P.TreatHouseholdsDuration) && ((P.TreatPropCaseHouseholds == 1) || (ranf_mt(tn) < P.TreatPropCaseHouseholds)))
 				{
 					j1 = Households[Hosts[ai].hh].FirstPerson; j2 = j1 + Households[Hosts[ai].hh].nh;
 					for (j = j1; j < j2; j++)
-						if (!HOST_TO_BE_TREATED(j)) DoProph(j, ts, tn, state, P, Hosts, Households, State);
+						if (!HOST_TO_BE_TREATED(j)) DoProph(j, ts, tn, state, P, Hosts, Households, State, StateT);
 				}
 			}
 			if (P.DoPlaces)
@@ -769,7 +769,7 @@ void DoDetectedCase(int ai, double t, unsigned short int ts, int tn, bitmap_stat
 
 }
 
-void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State) //// makes an infectious (but asymptomatic) person symptomatic. Called in IncubRecoverySweep (and DoInfect if P.DoOneGen)
+void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT) //// makes an infectious (but asymptomatic) person symptomatic. Called in IncubRecoverySweep (and DoInfect if P.DoOneGen)
 {
 	int j, k, f, j1, j2;
 	person* a;
@@ -795,7 +795,7 @@ void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const*
 							if ((t >= P.PlaceCloseTimeStart) && (!P.DoAdminTriggers) && (!P.DoGlobalTriggers))
 								for (j = 0; j < P.PlaceTypeNum; j++)
 									if ((j != P.HotelPlaceType) && (a->PlaceLinks[j] >= 0))
-											DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0, P, Hosts, Households);
+											DoPlaceClose(j, a->PlaceLinks[j], ts, tn, 0, P, Hosts, Households, StateT);
 						}
 
 						if ((!HOST_QUARANTINED(ai)) && (Hosts[ai].PlaceLinks[P.PlaceTypeNoAirNum - 1] >= 0) && (HOST_AGE_YEAR(ai) >= P.CaseAbsentChildAgeCutoff))
@@ -834,7 +834,7 @@ void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const*
 		{
 			StateT[tn].cumDC++;
 			StateT[tn].cumDC_adunit[Mcells[a->mcell].adunit]++;
-			DoDetectedCase(ai, t, ts, tn, state, P, Hosts, Households, State);
+			DoDetectedCase(ai, t, ts, tn, state, P, Hosts, Households, State, StateT);
 			//add detection time
 
 		}
@@ -849,21 +849,21 @@ void DoCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const*
 		if (P.DoSeverity)
 		{
 			if (a->Severity_Final == Severity_Mild)
-				DoMild(ai, tn, P, Hosts);
+				DoMild(ai, tn, P, Hosts, StateT);
 			else
-				DoILI(ai, tn, P, Hosts); //// symptomatic cases either mild or ILI at symptom onset. SARI and Critical cases still onset with ILI.
+				DoILI(ai, tn, P, Hosts, StateT); //// symptomatic cases either mild or ILI at symptom onset. SARI and Critical cases still onset with ILI.
 		}
 		if (P.DoAdUnits) StateT[tn].cumC_adunit[Mcells[a->mcell].adunit]++;
 	}
 }
 
-void DoFalseCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const *state, param const& P, person* Hosts, household const* Households, popvar& State)
+void DoFalseCase(int ai, double t, unsigned short int ts, int tn, bitmap_state const *state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT)
 {
 	/* Arguably adult absenteeism to take care of sick kids could be included here, but then output absenteeism would not be 'excess' absenteeism */
 	if ((P.ControlPropCasesId == 1) || (ranf_mt(tn) < P.ControlPropCasesId))
 	{
 		if ((!P.DoEarlyCaseDiagnosis) || (State.cumDC >= P.PreControlClusterIdCaseThreshold)) StateT[tn].cumDC++;
-		DoDetectedCase(ai, t, ts, tn, state, P, Hosts, Households, State);
+		DoDetectedCase(ai, t, ts, tn, state, P, Hosts, Households, State, StateT);
 	}
 	StateT[tn].cumFC++;
 }
@@ -913,7 +913,7 @@ void DoRecover(int ai, int tn, int run, bitmap_state const* state, param const& 
 	//fprintf(stderr, "\n ### %i %i  \n", ai, a->inf);
 }
 
-void DoDeath(int ai, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households)
+void DoDeath(int ai, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar* StateT)
 {
 	int i, x, y;
 	person* a = Hosts + ai;
@@ -957,7 +957,7 @@ void DoDeath(int ai, int tn, int run, bitmap_state const* state, param const& P,
 	}
 }
 
-void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *state, param const& P, person* Hosts, household const* Households, popvar const& State)
+void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *state, param const& P, person* Hosts, household const* Households, popvar const& State, popvar* StateT)
 {
 	int x, y;
 
@@ -993,7 +993,7 @@ void DoTreatCase(int ai, unsigned short int ts, int tn, bitmap_state const *stat
 	}
 }
 
-void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar const& State)
+void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar const& State, popvar* StateT)
 {
 	//// almost identical to DoProphNoDelay, except unsurprisingly this function includes delay between timestep and start of treatment. Also increments StateT[tn].cumT_keyworker by 1 every time.
 	int x, y;
@@ -1025,7 +1025,7 @@ void DoProph(int ai, unsigned short int ts, int tn, bitmap_state const* state, p
 	}
 }
 
-void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar const& State)
+void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar const& State, popvar* StateT)
 {
 	int x, y;
 
@@ -1056,7 +1056,7 @@ void DoProphNoDelay(int ai, unsigned short int ts, int tn, int nc, bitmap_state 
 	}
 }
 
-void DoPlaceClose(int i, int j, unsigned short int ts, int tn, int DoAnyway, param const& P, person* Hosts, household const* Households)
+void DoPlaceClose(int i, int j, unsigned short int ts, int tn, int DoAnyway, param const& P, person* Hosts, household const* Households, popvar* StateT)
 {
 	//// DoPlaceClose function called in TreatSweep (with arg DoAnyway = 1) and DoDetectedCase (with arg DoAnyway = 0).
 	//// Basic pupose of this function is to change Places[i][j].close_start_time and Places[i][j].close_end_time, so that macro PLACE_CLOSED will return true.
