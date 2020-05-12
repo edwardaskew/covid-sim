@@ -163,7 +163,7 @@ if args.covidsim is None:
     subprocess.run(['cmake', '--build', '.'])
 
     if os.name == 'nt':
-        covidsim_exe = os.path.join(build_dir, "Debug", "src", "CovidSim.exe")
+        covidsim_exe = os.path.join(build_dir, "src", "Debug", "CovidSim.exe")
     else:
         covidsim_exe = os.path.join(build_dir, "src", "CovidSim")
 
