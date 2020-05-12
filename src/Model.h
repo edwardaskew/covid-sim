@@ -328,7 +328,7 @@ typedef struct ADMINUNIT {
 } adminunit;
 
 #pragma pack(pop)
-extern popvar State, StateT[MAX_NUM_THREADS];
+extern popvar StateT[MAX_NUM_THREADS];
 extern cell* Cells, ** CellLookup;
 extern microcell* Mcells, ** McellLookup;
 extern place** Places;

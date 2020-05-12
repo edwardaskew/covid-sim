@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -193,7 +193,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2, P)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight, P)));
 	t2 = 0.0;
 
-	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households);
+	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State);
 	if (!(TimeSeries = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSMeanE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSVarE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
@@ -268,7 +268,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		if (!(nEvents = (int*)calloc(1, sizeof(int)))) ERR_CRITICAL("Unable to allocate events storage\n");
 	}
 
-	if(P.OutputNonSeverity) SaveAgeDistrib(P);
+	if(P.OutputNonSeverity) SaveAgeDistrib(P, State);
 
 	fprintf(stderr, "Initialising places...\n");
 	if (P.DoPlaces)
@@ -650,7 +650,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Model configuration complete.\n");
 }
 
-void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households)
+void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State)
 {
 	int i, j, k, l, m, i2, j2, last_i, mr, ad, tn, *mcl, country;
 	unsigned int rn, rn2;
@@ -1083,7 +1083,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 				m = Hosts[i].listpos;
 				xh = P.mcwidth * (ranf_mt(tn) + x);
 				yh = P.mcheight * (ranf_mt(tn) + y);
-				AssignHouseholdAges(m, i, tn, P, Hosts);
+				AssignHouseholdAges(m, i, tn, P, Hosts, State);
 				for (i2 = 0; i2 < m; i2++) Hosts[i + i2].listpos = 0;
 				if (P.DoHouseholds)
 				{
@@ -1622,7 +1622,7 @@ void SetupAirports(param& P)
 #define PROP_OTHER_PARENT_AWAY 0.0
 
 
-void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts)
+void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts, popvar const& State)
 {
 	/* Complex household age distribution model
 		- picks number of children (nc)
@@ -2504,7 +2504,7 @@ void SavePeopleToPlaces(char* NetworkFile, param const& P, person const* Hosts)
 	fclose(dat);
 }
 
-void SaveAgeDistrib(param const& P)
+void SaveAgeDistrib(param const& P, popvar const& State)
 {
 	int i;
 	FILE* dat;
