@@ -106,7 +106,7 @@ void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state)
 		else if (state->treated[i] > 0)
 			bmPixels[i] = (unsigned char)(2 * BWCOLS + BWCOLS * log((double)state->treated[i]) / logMaxPop); /* blue for treated */
 		else if (state->recovered[i] > 0)
-			bmPixels[i] = (unsigned char)(3 * BWCOLS + BWCOLS * log((double)state->population[i]) / logMaxPop);  /* green for recovered */
+			bmPixels[i] = (unsigned char)(3 * BWCOLS + BWCOLS * log((double)state->recovered[i]) / logMaxPop);  /* green for recovered */
 		else if (state->population[i] > 0)
 			bmPixels[i] = (unsigned char)(BWCOLS * log((double)state->population[i]) / logMaxPop); /* grey for just people */
 		else
