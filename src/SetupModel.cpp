@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits, airport* Airports)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -450,7 +450,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 
 
 	UpdateProbs(0, P, CellLookup);
-	if (P.DoAirports) SetupAirports(P, Cells, CellLookup, Mcells, Places);
+	if (P.DoAirports) SetupAirports(P, Cells, CellLookup, Mcells, Places, Airports);
 	if (P.R0scale != 1.0)
 	{
 		P.HouseholdTrans *= P.R0scale;
@@ -1442,7 +1442,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 	fprintf(stderr, "Assigned hosts to cells\n");
 
 }
-void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells, place ** Places)
+void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells, place ** Places, airport* Airports)
 {
 	int i, j, k, l, m;
 	double x, y, t, tmin;

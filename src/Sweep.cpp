@@ -66,7 +66,7 @@ void TravelReturnSweep(double t, param const& P, person* Hosts, place** Places)
 	}
 }
 
-void TravelDepartSweep(double t, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells, place **Places)
+void TravelDepartSweep(double t, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells, place **Places, airport const* Airports)
 {
 	int c, i, i2, j, k, l, d, d2, m, n, f, f2, f3, mps, nld, nad, nsk, tn, bm, hp;
 	double s, s2, nl;

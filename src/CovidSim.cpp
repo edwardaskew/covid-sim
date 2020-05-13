@@ -42,12 +42,12 @@
 void ReadParams(char*, char*, param& P, adminunit* AdUnits);
 void ReadInterventions(char*, param const& P, adminunit* AdUnits);
 int GetXMLNode(FILE*, const char*, const char*, char*, int);
-void ReadAirTravel(char*, param const& P);
+airport *ReadAirTravel(char*, param const& P);
 void InitModel(int, bitmap_state const* state, param& P, person * Hosts, household* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place ** Places, adminunit* AdUnits); //adding run number as a parameter for event log: ggilani - 15/10/2014
 void SeedInfection(double, int*, int, int, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits); //adding run number as a parameter for event log: ggilani - 15/10/2014
-int RunModel(int, bitmap_header const* bmh, unsigned char* bmf, unsigned char* bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits); //adding run number as a parameter for event log: ggilani - 15/10/2014
+int RunModel(int, bitmap_header const* bmh, unsigned char* bmf, unsigned char* bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits, airport const* Airports); //adding run number as a parameter for event log: ggilani - 15/10/2014
 void TravelReturnSweep(double, param const& P, person* Hosts, place** Places);
-void TravelDepartSweep(double, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells, place ** Places);
+void TravelDepartSweep(double, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells, place ** Places, airport const* Airports);
 void InfectSweep(double, int, bitmap_state const* bmh, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
 void IncubRecoverySweep(double, int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits); //added int as argument to record run number: ggilani - 15/10/14
 int TreatSweep(double, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits);
@@ -75,7 +75,6 @@ int GetInputParameter3(FILE*, const char*, const char*, void*, int, int, int, pa
 //// TimeSeries is an array of type results, used to store (unsurprisingly) a time series of every quantity in results. Mostly used in RecordSample.
 //// TSMeanNE and TSVarNE are the mean and variance of non-extinct time series. TSMeanE and TSVarE are the mean and variance of extinct time series. TSMean and TSVar are pointers that point to either extinct or non-extinct.
 results* TimeSeries, * TSMean, * TSVar, * TSMeanNE, * TSVarNE, * TSMeanE, * TSVarE; //// TimeSeries used in RecordSample, RecordInfTypes, SaveResults. TSMean and TSVar
-airport* Airports;
 //added declaration of pointer to events log: ggilani - 10/10/2014
 events* InfEventLog;
 int* nEvents;
@@ -114,6 +113,8 @@ int main(int argc, char* argv[])
 	microcell** McellLookup;
 	place** Places;
 	static adminunit AdUnits[MAX_ADUNITS];
+	airport* Airports = NULL;
+	
 
 	///// Flags to ensure various parameters have been read; set to false as default.
 	GotP = GotO = GotL = GotS = GotAP = GotScF = GotPP = 0;
@@ -354,7 +355,7 @@ int main(int argc, char* argv[])
 	if (P.DoAirports)
 	{
 		if (!GotAP) ERR_CRITICAL_FMT("Syntax:\n%s /P:ParamFile /O:OutputFile /AP:AirTravelFile [/s:SchoolFile] [/D:DensityFile] [/L:NetworkFileToLoad | /S:NetworkFileToSave] [/R:R0scaling] SetupSeed1 SetupSeed2 RunSeed1 RunSeed2\n", argv[0]);
-		ReadAirTravel(AirTravelFile, P);
+		Airports = ReadAirTravel(AirTravelFile, P);
 	}
 
 	//// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// ****
@@ -363,7 +364,7 @@ int main(int argc, char* argv[])
 
 	///// initialize model (for all realisations).
 	
-	SetupModel(DensityFile, NetworkFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits);
+	SetupModel(DensityFile, NetworkFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, Airports);
 
 	for (i = 0; i < MAX_ADUNITS; i++) AdUnits[i].NI = 0;
 	if (P.DoInterventionFile > 0)
@@ -414,7 +415,7 @@ int main(int argc, char* argv[])
 		InitModel(i, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits); //passing run number into RunModel so we can save run number in the infection event log: ggilani - 15/10/2014
 		
 		if (P.DoLoadSnapshot) LoadSnapshot(P, Hosts, Households, State, Cells, Mcells);
-		while (RunModel(i, bmh, bmf, bmPixels, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits))
+		while (RunModel(i, bmh, bmf, bmPixels, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, Airports))
 		{  // has been interrupted to reset holiday time. Note that this currently only happens in the first run, regardless of how many realisations are being run.
 			long tmp1 = thisRunSeed1;
 			long tmp2 = thisRunSeed2;
@@ -2307,7 +2308,7 @@ int GetXMLNode(FILE* dat, const char* NodeName, const char* ParentName, char* Va
 	if (ResetFilePos) fseek(dat, CurPos, 0);
 	return ret;
 }
-void ReadAirTravel(char* AirTravelFile, param const& P)
+airport* ReadAirTravel(char* AirTravelFile, param const& P)
 {
 	int i, j, k, l;
 	float sc, t, t2;
@@ -2315,6 +2316,7 @@ void ReadAirTravel(char* AirTravelFile, param const& P)
 	double traf;
 	char outname[1024];
 	FILE* dat;
+	airport* Airports;
 
 	fprintf(stderr, "Reading airport data...\nAirports with no connections = ");
 	if (!(dat = fopen(AirTravelFile, "rb"))) ERR_CRITICAL("Unable to open airport file\n");
@@ -2453,6 +2455,7 @@ void ReadAirTravel(char* AirTravelFile, param const& P)
 	for (i = 0; i < MAX_DIST; i++)
 		fprintf(dat, "%i\t%.10f\n", i, AirTravelDist[i]);
 	fclose(dat);
+	return Airports;
 }
 
 void InitModel(int run, bitmap_state const* state, param& P, person * Hosts, household* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place ** Places, adminunit* AdUnits) // passing run number so we can save run number in the infection event log: ggilani - 15/10/2014
@@ -2904,7 +2907,7 @@ void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* stat
 }
 
 
-int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned char *bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits) //added run number as parameter
+int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned char *bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits, airport const* Airports) //added run number as parameter
 {
 	int j, k, l, fs, fs2, nu, ni, nsi[MAX_NUM_SEED_LOCATIONS] /*Denotes either Num imported Infections given rate ir, or number false positive "infections"*/;
 	double ir; // infection import rate?;
@@ -2952,7 +2955,7 @@ int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned cha
 
 				if (fs)
 				{
-					if (P.DoAirports) TravelDepartSweep(t, P, Hosts, Households, Cells, CellLookup, Mcells, Places);
+					if (P.DoAirports) TravelDepartSweep(t, P, Hosts, Households, Cells, CellLookup, Mcells, Places, Airports);
 					k = (int)t;
 					if (P.DurImportTimeProfile > 0)
 					{
