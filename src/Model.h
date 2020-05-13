@@ -328,8 +328,6 @@ typedef struct ADMINUNIT {
 } adminunit;
 
 #pragma pack(pop)
-extern place** Places;
-extern adminunit AdUnits[MAX_ADUNITS];
 
 //// Time Series defs:
 //// TimeSeries is an array of type results, used to store (unsurprisingly) a time series of every quantity in results. Mostly used in RecordSample.

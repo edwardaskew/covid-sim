@@ -35,7 +35,7 @@ struct BitMap
 	void* bmf;
 };
 
-void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state, param const& P, person const* Hosts, household const* Households, microcell const* Mcells)
+void CaptureBitmap(unsigned char* bmPixels, bitmap_state const* state, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, adminunit const * AdUnits)
 {
 	int i, x, y, f, mi;
 	unsigned j;

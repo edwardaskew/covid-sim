@@ -16,7 +16,7 @@
 #include "Update.h"
 
 
-void TravelReturnSweep(double t, param const& P, person* Hosts)
+void TravelReturnSweep(double t, param const& P, person* Hosts, place** Places)
 {
 	int i, j, k, l, n, nr, ner, tn;
 
@@ -66,7 +66,7 @@ void TravelReturnSweep(double t, param const& P, person* Hosts)
 	}
 }
 
-void TravelDepartSweep(double t, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells)
+void TravelDepartSweep(double t, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells, place **Places)
 {
 	int c, i, i2, j, k, l, d, d2, m, n, f, f2, f3, mps, nld, nad, nsk, tn, bm, hp;
 	double s, s2, nl;
@@ -263,7 +263,7 @@ void TravelDepartSweep(double t, param const& P, person* Hosts, household const*
 	}
 }
 
-void InfectSweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells) //added run number as argument in order to record it in event log
+void InfectSweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits) //added run number as argument in order to record it in event log
 {
 	//// This function loops over infected people, and decides whom to infect. Structure is 1) #pragma loop over all cells then 1a) infectious people, which chooses who they will infect, adds them to a queue
 	//// Next 2) #pragma loop infects those people from queue (using DoInfect function). This is to avoid race conditions.
@@ -710,16 +710,16 @@ void InfectSweep(double t, int run, bitmap_state const* state, param const& P, p
 				Hosts[infectee].infector = infector;
 				Hosts[infectee].infect_type = infect_type;
 				if (infect_type == -1) //// i.e. if host doesn't have an infector
-					DoFalseCase(infectee, t, ts, j, state, P, Hosts, Households, State, StateT, Cells, Mcells);
+					DoFalseCase(infectee, t, ts, j, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
 				else
-					DoInfect(infectee, t, j, run, state, P, Hosts, Households, State, StateT, Cells, Mcells);
+					DoInfect(infectee, t, j, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
 			}
 			StateT[k].n_queue[j] = 0;
 		}
 	}
 }
 
-void IncubRecoverySweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells)
+void IncubRecoverySweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits)
 {
 	int i, j, k, l, b, tn, ci;
 	double ht;
@@ -769,7 +769,7 @@ void IncubRecoverySweep(double t, int run, bitmap_state const* state, param cons
 			c = CellLookup[b]; //// find (pointer-to) cell.
 			for (j = ((int)c->L - 1); j >= 0; j--) //// loop backwards over latently infected people, hence it starts from L - 1 and goes to zero. Runs backwards because of pointer swapping?
 				if (ts >= Hosts[c->latent[j]].latent_time) //// if now after time at which person became infectious (latent_time a slight misnomer).
-					DoIncub(c->latent[j], ts, tn, run, P, Hosts, Cells, Mcells); //// move infected person from latently infected (L) to infectious (I), but not symptomatic
+					DoIncub(c->latent[j], ts, tn, run, P, Hosts, Cells, Mcells, AdUnits); //// move infected person from latently infected (L) to infectious (I), but not symptomatic
 			//StateT[tn].n_queue[0] = StateT[tn].n_queue[1] = 0;
 			for (j = c->I - 1; j >= 0; j--) ///// loop backwards over Infectious people. Runs backwards because of pointer swapping?
 			{
@@ -779,7 +779,7 @@ void IncubRecoverySweep(double t, int run, bitmap_state const* state, param cons
 				/* Following line not 100% consistent with DoIncub. All severity time points (e.g. SARI time) are added to latent_time, not latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep))*/
 				tc = si->latent_time + ((int)(P.LatentToSymptDelay / P.TimeStep)); //// time that person si/ci becomes case (symptomatic)...
 				if ((P.DoSymptoms) && (ts == tc)) //// ... if now is that time...
-					DoCase(ci, t, ts, tn, state, P, Hosts, Households, State, StateT, Cells, Mcells);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
+					DoCase(ci, t, ts, tn, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);		  //// ... change infectious (but asymptomatic) person to infectious and symptomatic. If doing severity, this contains DoMild and DoILI.
 
 				if (P.DoSeverity)
 				{
@@ -824,7 +824,7 @@ void IncubRecoverySweep(double t, int run, bitmap_state const* state, param cons
 }
 
 
-void DigitalContactTracingSweep(double t, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells)
+void DigitalContactTracingSweep(double t, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits)
 {
 	/**
 	 * Function: DigitalContactTracingSweep
@@ -1098,7 +1098,7 @@ void DigitalContactTracingSweep(double t, bitmap_state const* state, param const
 									//if they are asymptomatic, i.e. specifically if they have inf flag 2, call DoDetectedCase in order to trigger HQ and PC too.
 									if (Hosts[contact].inf == 2)
 									{
-										DoDetectedCase(contact, t, ts, tn, state, P, Hosts, Households, State, StateT, Cells, Mcells);
+										DoDetectedCase(contact, t, ts, tn, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
 										Hosts[contact].detected = 1; Hosts[contact].detected_time = ts;
 									}
 								}
@@ -1128,7 +1128,7 @@ void DigitalContactTracingSweep(double t, bitmap_state const* state, param const
 							//if they are asymptomatic, i.e. specifically if they have inf flag 2, call DoDetectedCase in order to trigger HQ and PC too.
 							if (Hosts[contact].inf == 2)
 							{
-								DoDetectedCase(contact, t, ts, tn, state, P, Hosts, Households, State, StateT, Cells, Mcells);
+								DoDetectedCase(contact, t, ts, tn, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
 								Hosts[contact].detected = 1; Hosts[contact].detected_time = ts;
 							}
 						}
@@ -1164,7 +1164,7 @@ void DigitalContactTracingSweep(double t, bitmap_state const* state, param const
 }
 
 
-int TreatSweep(double t, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, microcell** McellLookup)
+int TreatSweep(double t, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits)
 {
 	///// function loops over microcells to decide which cells are treated (either with treatment, vaccine, social distancing, movement restrictions etc.)
 
@@ -1491,7 +1491,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 							for (j2 = 0; j2 < P.PlaceTypeNum; j2++)
 								if (j2 != P.HotelPlaceType)
 									for (i2 = 0; i2 < Mcells[b].np[j2]; i2++)
-										DoPlaceOpen(j2, Mcells[b].places[j2][i2], ts, tn, P, Hosts, Households);
+										DoPlaceOpen(j2, Mcells[b].places[j2][i2], ts, tn, P, Hosts, Households, Places);
 						}
 					}
 
@@ -1538,7 +1538,7 @@ int TreatSweep(double t, bitmap_state const* state, param const& P, person* Host
 									for (j2 = 0; j2 < P.PlaceTypeNum; j2++)
 										if (j2 != P.HotelPlaceType)
 											for (i2 = 0; i2 < Mcells[b].np[j2]; i2++)
-												DoPlaceClose(j2, Mcells[b].places[j2][i2], ts, tn, 1, P, Hosts, Households, StateT, Mcells);
+												DoPlaceClose(j2, Mcells[b].places[j2][i2], ts, tn, 1, P, Hosts, Households, StateT, Mcells, Places, AdUnits);
 								}
 							}
 						}

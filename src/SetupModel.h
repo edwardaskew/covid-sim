@@ -1,12 +1,12 @@
 #ifndef COVIDSIM_SETUPMODEL_H_INCLUDED_
 #define COVIDSIM_SETUPMODEL_H_INCLUDED_
 
-void SetupModel(char*, char*, char*, char*, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup);
-void SetupPopulation(char*, char*, char*, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup);
-void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells);
+void SetupModel(char*, char*, char*, char*, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits);
+void SetupPopulation(char*, char*, char*, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits);
+void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells, place ** Places);
 void AssignHouseholdAges(int, int, int, param const& P, person* Hosts, popvar const& State, microcell const* Mcells);
-void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells);
-void StratifyPlaces(param const& P, person* Hosts, popvar* StateT);
+void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells, place** Places);
+void StratifyPlaces(param const& P, person* Hosts, popvar* StateT, place** Places);
 void LoadPeopleToPlaces(char*, param const& P, person* Hosts);
 void SavePeopleToPlaces(char*, param const& P, person const* Hosts);
 void SaveAgeDistrib(param const& P, popvar const& State);

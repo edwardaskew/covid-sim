@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -193,7 +193,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2, P)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight, P)));
 	t2 = 0.0;
 
-	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup);
+	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits);
 	if (!(TimeSeries = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSMeanE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
 	if (!(TSVarE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
@@ -276,7 +276,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		if (P.LoadSaveNetwork == 1)
 			LoadPeopleToPlaces(NetworkFile, P, Hosts);
 		else
-			AssignPeopleToPlaces(P, Hosts, Households, Cells, CellLookup, Mcells);
+			AssignPeopleToPlaces(P, Hosts, Households, Cells, CellLookup, Mcells, Places);
 	}
 
 
@@ -288,7 +288,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	// or loaded the network from a file. Therefore we need to reseed the RNG.
 	setall(&P.nextSetupSeed1, &P.nextSetupSeed2);
 
-	StratifyPlaces(P, Hosts, StateT);
+	StratifyPlaces(P, Hosts, StateT, Places);
 	for (i = 0; i < P.NC; i++)
 	{
 		Cells[i].S = Cells[i].n;
@@ -450,7 +450,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 
 
 	UpdateProbs(0, P, CellLookup);
-	if (P.DoAirports) SetupAirports(P, Cells, CellLookup, Mcells);
+	if (P.DoAirports) SetupAirports(P, Cells, CellLookup, Mcells, Places);
 	if (P.R0scale != 1.0)
 	{
 		P.HouseholdTrans *= P.R0scale;
@@ -650,7 +650,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Model configuration complete.\n");
 }
 
-void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup)
+void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits)
 {
 	int i, j, k, l, m, i2, j2, last_i, mr, ad, tn, *mcl, country;
 	unsigned int rn, rn2;
@@ -1442,7 +1442,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 	fprintf(stderr, "Assigned hosts to cells\n");
 
 }
-void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells)
+void SetupAirports(param& P, cell const* Cells, cell** CellLookup, microcell* Mcells, place ** Places)
 {
 	int i, j, k, l, m;
 	double x, y, t, tmin;
@@ -1794,7 +1794,7 @@ void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts,
 	for (i = 0; i < n; i++) Hosts[pers + i].age = (unsigned char) a[i];
 }
 
-void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells)
+void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells, place** Places)
 {
 	int i, i2, j, j2, k, k2, l, m, m2, tp, f, f2, f3, f4, ic, mx, my, a, cnt, tn, ca, nt, nn;
 	int* PeopleArray;
@@ -2281,7 +2281,7 @@ void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, 
 	}
 
 }
-void StratifyPlaces(param const& P, person* Hosts, popvar* StateT)
+void StratifyPlaces(param const& P, person* Hosts, popvar* StateT, place** Places)
 {
 	int i, j, k, l, m, n, tn;
 	double t;
