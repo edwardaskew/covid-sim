@@ -263,7 +263,7 @@ void TravelDepartSweep(double t, param const& P, person* Hosts, household const*
 	}
 }
 
-void InfectSweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits) //added run number as argument in order to record it in event log
+void InfectSweep(double t, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits, events* InfEventLog) //added run number as argument in order to record it in event log
 {
 	//// This function loops over infected people, and decides whom to infect. Structure is 1) #pragma loop over all cells then 1a) infectious people, which chooses who they will infect, adds them to a queue
 	//// Next 2) #pragma loop infects those people from queue (using DoInfect function). This is to avoid race conditions.
@@ -712,7 +712,7 @@ void InfectSweep(double t, int run, bitmap_state const* state, param const& P, p
 				if (infect_type == -1) //// i.e. if host doesn't have an infector
 					DoFalseCase(infectee, t, ts, j, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
 				else
-					DoInfect(infectee, t, j, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
+					DoInfect(infectee, t, j, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits, InfEventLog);
 			}
 			StateT[k].n_queue[j] = 0;
 		}

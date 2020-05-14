@@ -11,7 +11,7 @@
 #include "Rand.h"
 
 //adding function to record an event: ggilani - 10/10/2014
-void RecordEvent(double, int, int, int, int, param const& P, person const* Hosts, household const* Households, microcell const* Mcells); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
+void RecordEvent(double, int, int, int, int, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, events* InfEventLog); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
 
 unsigned short int ChooseFromICDF(double const *, double, int, param const& P);
 int ChooseFinalDiseaseSeverity(int, int, param const& P);
@@ -68,7 +68,7 @@ void DoImmune(int ai, bitmap_state const* state, param const& P, person* Hosts, 
 		}
 	}
 }
-void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
+void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits, events * InfEventLog) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
 {
 	///// This updates a number of things concerning person ai (and their contacts/infectors/places etc.) at time t in thread tn for this run.
 	int i;
@@ -144,7 +144,7 @@ void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, para
 		{
 			if (*nEvents < P.MaxInfEvents)
 			{
-				RecordEvent(t, ai, run, 0, tn, P, Hosts, Households, Mcells); //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
+				RecordEvent(t, ai, run, 0, tn, P, Hosts, Households, Mcells, InfEventLog); //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
 			}
 		}
 		if ((t > 0) && (P.DoOneGen))
@@ -156,7 +156,7 @@ void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, para
 	}
 }
 
-void RecordEvent(double t, int ai, int run, int type, int tn, param const& P, person const* Hosts, household const* Households, microcell const* Mcells) //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
+void RecordEvent(double t, int ai, int run, int type, int tn, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, events* InfEventLog) //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
 {
 	/* Function: RecordEvent(t, ai)
 	 * Records an infection event in the event log

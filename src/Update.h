@@ -5,7 +5,7 @@
 #include "Param.h"
 
 void DoImmune(int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, cell* Cells);
-void DoInfect(int, double, int, int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
+void DoInfect(int, double, int, int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits, events * InfEventLog); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
 void DoIncub(int, unsigned short int, int, int, param const& P, person* Hosts, cell* Cells, microcell const* Mcells, adminunit const* AdUnits); //added int as argument to record run number: ggilani - 23/10/14
 void DoDetectedCase(int, double, unsigned short int, int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits);
 void DoCase(int, double, unsigned short int, int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits);

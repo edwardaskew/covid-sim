@@ -1,10 +1,12 @@
 #ifndef COVIDSIM_MODEL_H_INCLUDED_
 #define COVIDSIM_MODEL_H_INCLUDED_
 
+#include <stdlib.h>
+
 #include "Country.h"
 #include "MachineDefines.h"
 #include "Constants.h"
-
+#include "Error.h"
 
 //// need to test that inequalities in IncubRecoverySweep can be replaced if you initialize to USHRT_MAX, rather than zero.
 //// need to output quantities by admin unit
@@ -329,12 +331,45 @@ typedef struct ADMINUNIT {
 
 #pragma pack(pop)
 
-//// Time Series defs:
-//// TimeSeries is an array of type results, used to store (unsurprisingly) a time series of every quantity in results. Mostly used in RecordSample.
-//// TSMeanNE and TSVarNE are the mean and variance of non-extinct time series. TSMeanE and TSVarE are the mean and variance of extinct time series. TSMean and TSVar are pointers that point to either extinct or non-extinct.
-extern results* TimeSeries, *TSMean, *TSVar, *TSMeanNE, *TSVarNE, *TSMeanE, *TSVarE; //// TimeSeries used in RecordSample, RecordInfTypes, SaveResults. TSMean and TSVar
+struct result_collection {
+	result_collection(int num_samples) {
+		if (!(TimeSeries = (results*)calloc(num_samples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
+		if (!(TSMeanE = (results*)calloc(num_samples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
+		if (!(TSVarE = (results*)calloc(num_samples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
+		if (!(TSMeanNE = (results*)calloc(num_samples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
+		if (!(TSVarNE = (results*)calloc(num_samples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
+		TSMean = TSMeanE; TSVar = TSVarE;
+	}
+	//disable copying - we could use boost::noncopyable if/when boost is included but for now we'll just wing it
+	result_collection(result_collection const&) = delete;
+	result_collection& operator=(result_collection const&) = delete;
 
-extern events* InfEventLog;
+	~result_collection() {
+		free(TimeSeries);
+		free(TSMeanE);
+		free(TSVarE);
+		free(TSMeanNE);
+		free(TSVarNE);
+
+		TimeSeries = NULL;
+		TSMean = NULL;
+		TSMeanE = NULL;
+		TSVarE = NULL;
+		TSMeanNE = NULL;
+		TSVarNE = NULL;
+	}
+
+	//// Time Series defs:
+	//// TimeSeries is an array of type results, used to store (unsurprisingly) a time series of every quantity in results. Mostly used in RecordSample.
+	//// TSMeanNE and TSVarNE are the mean and variance of non-extinct time series. TSMeanE and TSVarE are the mean and variance of extinct time series. TSMean and TSVar are pointers that point to either extinct or non-extinct.
+	results* TimeSeries;
+	results* TSMean;
+	results* TSVar;
+	results* TSVarNE;
+	results* TSMeanNE;
+	results* TSMeanE;
+	results* TSVarE;
+};
 extern int* nEvents;
 
 

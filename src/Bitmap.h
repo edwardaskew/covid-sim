@@ -53,6 +53,11 @@ struct bitmap_state {
 			ERR_CRITICAL("Unable to allocate storage for bitmap\n");
 		}
 	}
+
+	//disable copying - we could use boost::noncopyable if/when boost is included but for now we'll just wing it
+	bitmap_state(bitmap_state const&) = delete;
+	bitmap_state& operator=(bitmap_state const&) = delete;
+
 	~bitmap_state() {
 		free(population);
 		free(infected);

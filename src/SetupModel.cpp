@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits, airport* Airports)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits, airport* Airports, events *& InfEventLog, result_collection* result)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -30,6 +30,8 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	double t, s, s2, s3, x, y, t2, t3, d, q;
 	char buf[2048];
 	FILE* dat;
+	results* const TSVar = result->TSVar;
+	results* const TSMean = result->TSMean;
 
 	if (!(Xcg1 = (long*)malloc(MAX_NUM_THREADS * CACHE_LINE_SIZE * sizeof(long)))) ERR_CRITICAL("Unable to allocate ranf storage\n");
 	if (!(Xcg2 = (long*)malloc(MAX_NUM_THREADS * CACHE_LINE_SIZE * sizeof(long)))) ERR_CRITICAL("Unable to allocate ranf storage\n");
@@ -194,12 +196,6 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	t2 = 0.0;
 
 	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits);
-	if (!(TimeSeries = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
-	if (!(TSMeanE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
-	if (!(TSVarE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
-	if (!(TSMeanNE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
-	if (!(TSVarNE = (results*)calloc(P.NumSamples, sizeof(results)))) ERR_CRITICAL("Unable to allocate results storage\n");
-	TSMean = TSMeanE; TSVar = TSVarE;
 
 	///// This loops over index l twice just to reset the pointer TSMean from TSMeanE to TSMeanNE (same for TSVar).
 	for (l = 0; l < 2; l++)
@@ -258,7 +254,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 						TSMean[i].cumMild_adunit[j] = TSMean[i].cumILI_adunit[j] = TSMean[i].cumSARI_adunit[j] = TSMean[i].cumCritical_adunit[j] = TSMean[i].cumCritRecov_adunit[j] = 0;
 			}
 		}
-		TSMean = TSMeanNE; TSVar = TSVarNE;
+		result->TSMean = result->TSMeanNE; result->TSVar = result->TSVarNE;
 	}
 
 	//added memory allocation and initialisation of infection event log, if DoRecordInfEvents is set to 1: ggilani - 10/10/2014
@@ -565,7 +561,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		fprintf(stderr, "Reset spatial R0 to 0\n");
 	}
 	fprintf(stderr, "LocalBeta = %lg\n", P.LocalBeta);
-	TSMean = TSMeanNE; TSVar = TSVarNE;
+	result->TSMean = result->TSMeanNE; result->TSVar = result->TSVarNE;
 	fprintf(stderr, "Calculated approx cell probabilities\n");
 	for (i = 0; i < INFECT_TYPE_MASK; i++) inftype_av[i] = 0;
 	for (i = 0; i < MAX_COUNTRIES; i++) infcountry_av[i] = infcountry_num[i] = 0;

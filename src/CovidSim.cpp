@@ -43,25 +43,25 @@ void ReadParams(char*, char*, param& P, adminunit* AdUnits);
 void ReadInterventions(char*, param const& P, adminunit* AdUnits);
 int GetXMLNode(FILE*, const char*, const char*, char*, int);
 airport *ReadAirTravel(char*, param const& P);
-void InitModel(int, bitmap_state const* state, param& P, person * Hosts, household* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place ** Places, adminunit* AdUnits); //adding run number as a parameter for event log: ggilani - 15/10/2014
-void SeedInfection(double, int*, int, int, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits); //adding run number as a parameter for event log: ggilani - 15/10/2014
-int RunModel(int, bitmap_header const* bmh, unsigned char* bmf, unsigned char* bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits, airport const* Airports); //adding run number as a parameter for event log: ggilani - 15/10/2014
+void InitModel(int, bitmap_state const* state, param& P, person * Hosts, household* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place ** Places, adminunit* AdUnits, events* InfEventLog); //adding run number as a parameter for event log: ggilani - 15/10/2014
+void SeedInfection(double, int*, int, int, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits, events* InfEventLog); //adding run number as a parameter for event log: ggilani - 15/10/2014
+int RunModel(int, bitmap_header const* bmh, unsigned char* bmf, unsigned char* bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits, airport const* Airports, events* InfEventLog, result_collection* result); //adding run number as a parameter for event log: ggilani - 15/10/2014
 void TravelReturnSweep(double, param const& P, person* Hosts, place** Places);
 void TravelDepartSweep(double, param const& P, person* Hosts, household const* Households, cell const* Cells, cell** CellLookup, microcell const* Mcells, place ** Places, airport const* Airports);
-void InfectSweep(double, int, bitmap_state const* bmh, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
+void InfectSweep(double, int, bitmap_state const* bmh, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits, events* InfEventLog); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
 void IncubRecoverySweep(double, int, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, place** Places, adminunit* AdUnits); //added int as argument to record run number: ggilani - 15/10/14
 int TreatSweep(double, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits);
 void DigitalContactTracingSweep(double, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits); // added function to update contact tracing number
 void SaveDistribs(param const& P, person const* Hosts, household const* Households, microcell* Mcells, place** Places, adminunit const* AdUnits);
 void SaveOriginDestMatrix(param const& P, adminunit const* AdUnits); //added function to save origin destination matrix so it can be done separately to the main results: ggilani - 13/02/15
-void SaveResults(param const& P, person const* Hosts, popvar const& State, adminunit const* AdUnits);
-void SaveSummaryResults(param const& P, adminunit const* AdUnits);
+void SaveResults(param const& P, person const* Hosts, popvar const& State, adminunit const* AdUnits, results const* TimeSeries);
+void SaveSummaryResults(param const& P, adminunit const* AdUnits, result_collection const* result);
 void SaveRandomSeeds(param const& P); //added this function to save random seeds for each run: ggilani - 09/03/17
-void SaveEvents(void); //added this function to save infection events from all realisations: ggilani - 15/10/14
+void SaveEvents(events const* InfEventLog); //added this function to save infection events from all realisations: ggilani - 15/10/14
 void LoadSnapshot(param& P, person * Hosts, household* Households, popvar& State, cell* Cells, microcell* Mcells);
 void SaveSnapshot(param const& P, person const* Hosts, household const* Households, popvar const& State, cell const* Cells, microcell const* Mcells);
-void RecordInfTypes(param& P, person* Hosts, household const* Households, cell const* Cells, microcell const* Mcells);
-void RecordSample(double, int, bitmap_header const* bmh, unsigned char const* bmf, unsigned char* bmPixels, bitmap_state const* state, param& P, person const* Hosts, household const* Households, popvar& State, popvar* StateT, cell** CellLookup, microcell const* Mcells, place** Places, adminunit* AdUnits);
+void RecordInfTypes(param& P, person* Hosts, household const* Households, cell const* Cells, microcell const* Mcells, result_collection* result);
+void RecordSample(double, int, bitmap_header const* bmh, unsigned char const* bmf, unsigned char* bmPixels, bitmap_state const* state, param& P, person const* Hosts, household const* Households, popvar& State, popvar* StateT, cell** CellLookup, microcell const* Mcells, place** Places, adminunit* AdUnits, result_collection* result);
 
 void CalcOriginDestMatrix_adunit(param const& P, popvar const* StateT, cell const* Cells, cell** CellLookup, microcell const* Mcells, adminunit* AdUnits); //added function to calculate origin destination matrix: ggilani 28/01/15
 
@@ -69,14 +69,6 @@ int GetInputParameter(FILE*, FILE*, const char*, const char*, void*, int, int, i
 int GetInputParameter2(FILE*, FILE*, const char*, const char*, void*, int, int, int, param const& P);
 int GetInputParameter3(FILE*, const char*, const char*, void*, int, int, int, param const& P);
 
-
-
-//// Time Series defs:
-//// TimeSeries is an array of type results, used to store (unsurprisingly) a time series of every quantity in results. Mostly used in RecordSample.
-//// TSMeanNE and TSVarNE are the mean and variance of non-extinct time series. TSMeanE and TSVarE are the mean and variance of extinct time series. TSMean and TSVar are pointers that point to either extinct or non-extinct.
-results* TimeSeries, * TSMean, * TSVar, * TSMeanNE, * TSVarNE, * TSMeanE, * TSVarE; //// TimeSeries used in RecordSample, RecordInfTypes, SaveResults. TSMean and TSVar
-//added declaration of pointer to events log: ggilani - 10/10/2014
-events* InfEventLog;
 int* nEvents;
 
 double inftype[INFECT_TYPE_MASK], inftype_av[INFECT_TYPE_MASK], infcountry[MAX_COUNTRIES], infcountry_av[MAX_COUNTRIES], infcountry_num[MAX_COUNTRIES];
@@ -114,6 +106,8 @@ int main(int argc, char* argv[])
 	place** Places;
 	static adminunit AdUnits[MAX_ADUNITS];
 	airport* Airports = NULL;
+	events* InfEventLog;
+	
 	
 
 	///// Flags to ensure various parameters have been read; set to false as default.
@@ -363,8 +357,8 @@ int main(int argc, char* argv[])
 	//// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// **** //// ****
 
 	///// initialize model (for all realisations).
-	
-	SetupModel(DensityFile, NetworkFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, Airports);
+	result_collection result(P.NumSamples);
+	SetupModel(DensityFile, NetworkFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, Airports, InfEventLog, &result);
 
 	for (i = 0; i < MAX_ADUNITS; i++) AdUnits[i].NI = 0;
 	if (P.DoInterventionFile > 0)
@@ -411,27 +405,27 @@ int main(int argc, char* argv[])
 		bitmap_header* bmh;
 		unsigned char* bmp, * bmf, * bmPixels;
 		InitBMHead(bmh, bmPixels, bmp, bmf, P);
-		bitmap_state state = bitmap_state(bmh->width, bmh->height);
-		InitModel(i, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits); //passing run number into RunModel so we can save run number in the infection event log: ggilani - 15/10/2014
+		bitmap_state state(bmh->width, bmh->height);
+		InitModel(i, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, InfEventLog); //passing run number into RunModel so we can save run number in the infection event log: ggilani - 15/10/2014
 		
 		if (P.DoLoadSnapshot) LoadSnapshot(P, Hosts, Households, State, Cells, Mcells);
-		while (RunModel(i, bmh, bmf, bmPixels, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, Airports))
+		while (RunModel(i, bmh, bmf, bmPixels, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, Airports, InfEventLog, &result))
 		{  // has been interrupted to reset holiday time. Note that this currently only happens in the first run, regardless of how many realisations are being run.
 			long tmp1 = thisRunSeed1;
 			long tmp2 = thisRunSeed2;
 			setall(&tmp1, &tmp2);  // reset random number seeds to generate same run again after calibration.
-			InitModel(i, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits);
+			InitModel(i, &state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, InfEventLog);
 		}
 		if (P.OutputNonSummaryResults)
 		{
-			if (((!TimeSeries[P.NumSamples - 1].extinct) || (!P.OutputOnlyNonExtinct)) && (P.OutputEveryRealisation))
+			if (((!result.TimeSeries[P.NumSamples - 1].extinct) || (!P.OutputOnlyNonExtinct)) && (P.OutputEveryRealisation))
 			{
-				SaveResults(P, Hosts, State, AdUnits);
+				SaveResults(P, Hosts, State, AdUnits, result.TimeSeries);
 			}
 		}
 		if ((P.DoRecordInfEvents) && (P.RecordInfEventsPerRun == 1))
 		{
-			SaveEvents();
+			SaveEvents(InfEventLog);
 		}
 	}
 	sprintf(OutFile, "%s", OutFileBase);
@@ -444,15 +438,15 @@ int main(int argc, char* argv[])
 	}
 
 	P.NRactual = P.NRactNE;
-	TSMean = TSMeanNE; TSVar = TSVarNE;
+	result.TSMean = result.TSMeanNE; result.TSVar = result.TSVarNE;
 	if ((P.DoRecordInfEvents) && (P.RecordInfEventsPerRun == 0))
 	{
-		SaveEvents();
+		SaveEvents(InfEventLog);
 	}
 	sprintf(OutFile, "%s.avNE", OutFileBase);
-	SaveSummaryResults(P, AdUnits);
+	SaveSummaryResults(P, AdUnits, &result);
 	P.NRactual = P.NRactE;
-	TSMean = TSMeanE; TSVar = TSVarE;
+	result.TSMean = result.TSMeanE; result.TSVar = result.TSVarE;
 	sprintf(OutFile, "%s.avE", OutFileBase);
 	//SaveSummaryResults();
 
@@ -2458,7 +2452,7 @@ airport* ReadAirTravel(char* AirTravelFile, param const& P)
 	return Airports;
 }
 
-void InitModel(int run, bitmap_state const* state, param& P, person * Hosts, household* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place ** Places, adminunit* AdUnits) // passing run number so we can save run number in the infection event log: ggilani - 15/10/2014
+void InitModel(int run, bitmap_state const* state, param& P, person * Hosts, household* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place ** Places, adminunit* AdUnits, events* InfEventLog) // passing run number so we can save run number in the infection event log: ggilani - 15/10/2014
 {
 	int i, j, k, l, m, tn, nim;
 	int nsi[MAX_NUM_SEED_LOCATIONS];
@@ -2760,7 +2754,7 @@ void InitModel(int run, bitmap_state const* state, param& P, person * Hosts, hou
 	}
 
 	for (i = 0; i < P.NumSeedLocations; i++) nsi[i] = (int) (((double) P.NumInitialInfections[i]) * P.InitialInfectionsAdminUnitWeight[i]* P.SeedingScaling +0.5);
-	SeedInfection(0, nsi, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
+	SeedInfection(0, nsi, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits, InfEventLog);
 	P.ControlPropCasesId = P.PreAlertControlPropCasesId;
 	P.TreatTimeStart = 1e10;
 
@@ -2785,7 +2779,7 @@ void InitModel(int run, bitmap_state const* state, param& P, person * Hosts, hou
 	fprintf(stderr, "Finished InitModel.\n");
 }
 
-void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits) //adding run number to pass it to event log
+void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits, events* InfEventLog) //adding run number to pass it to event log
 {
 	/* *nsi is an array of the number of seeding infections by location. During runtime, usually just a single int (given by a poisson distribution)*/
 	/*rf set to 0 when initializing model, otherwise set to 1 during runtime. */
@@ -2821,7 +2815,7 @@ void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* stat
 						}
 						Hosts[l].infector = -2;
 						Hosts[l].infect_type = INFECT_TYPE_MASK - 1;
-						DoInfect(l, t, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits); ///// guessing this updates a number of things about person l at time t in thread 0 for this run.
+						DoInfect(l, t, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits, InfEventLog); ///// guessing this updates a number of things about person l at time t in thread 0 for this run.
 						m = 0;
 					}
 				}
@@ -2852,7 +2846,7 @@ void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* stat
 							P.LocationInitialInfection[i][0] = Households[Hosts[l].hh].loc_x;
 							P.LocationInitialInfection[i][1] = Households[Hosts[l].hh].loc_y;
 							Hosts[l].infector = -2; Hosts[l].infect_type = INFECT_TYPE_MASK - 1;
-							DoInfect(l, t, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
+							DoInfect(l, t, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits, InfEventLog);
 							m = 0;
 						}
 					}
@@ -2888,7 +2882,7 @@ void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* stat
 						P.LocationInitialInfection[i][0] = Households[Hosts[l].hh].loc_x;
 						P.LocationInitialInfection[i][1] = Households[Hosts[l].hh].loc_y;
 						Hosts[l].infector = -2; Hosts[l].infect_type = INFECT_TYPE_MASK - 1;
-						DoInfect(l, t, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
+						DoInfect(l, t, 0, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits, InfEventLog);
 						m = 0;
 					}
 					else
@@ -2907,7 +2901,7 @@ void SeedInfection(double t, int* nsi, int rf, int run, bitmap_state const* stat
 }
 
 
-int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned char *bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits, airport const* Airports) //added run number as parameter
+int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned char *bmPixels, bitmap_state const* state, param& P, person * Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, cell** CellLookup, microcell* Mcells, microcell** McellLookup, place** Places, adminunit* AdUnits, airport const* Airports, events* InfEventLog, result_collection* result) //added run number as parameter
 {
 	int j, k, l, fs, fs2, nu, ni, nsi[MAX_NUM_SEED_LOCATIONS] /*Denotes either Num imported Infections given rate ir, or number false positive "infections"*/;
 	double ir; // infection import rate?;
@@ -2933,7 +2927,7 @@ int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned cha
 
 	for (ns = 1; ((ns < P.NumSamples) && (!InterruptRun)); ns++) //&&(continueEvents) <-removed this
 	{
-		RecordSample(t, ns - 1, bmh, bmf, bmPixels, state, P, Hosts, Households, State, StateT, CellLookup, Mcells, Places, AdUnits);
+		RecordSample(t, ns - 1, bmh, bmf, bmPixels, state, P, Hosts, Households, State, StateT, CellLookup, Mcells, Places, AdUnits, result);
 		fprintf(stderr, "\r    t=%lg   %i    %i|%i    %i     %i [=%i]  %i (%lg %lg %lg)   %lg    ", t,
 			State.S, State.L, State.I, State.R, State.D, State.S + State.L + State.I + State.R + State.D, State.cumD, State.cumT, State.cumV, State.cumVG, sqrt(State.maxRad2) / 1000); //added State.cumVG
 		if (!InterruptRun)
@@ -2968,7 +2962,7 @@ int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned cha
 					if (ir > 0) //// if infection import rate > 0, seed some infections
 					{
 						for (k = ni = 0; k < P.NumSeedLocations; k++) ni += (nsi[k] = (int)ignpoi(P.TimeStep * ir * P.InitialInfectionsAdminUnitWeight[k] * P.SeedingScaling)); //// sample number imported infections from Poisson distribution.
-						if (ni > 0)		SeedInfection(t, nsi, 1, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits);
+						if (ni > 0)		SeedInfection(t, nsi, 1, run, state, P, Hosts, Households, State, StateT, Cells, Mcells, Places, AdUnits, InfEventLog);
 					}
 					if (P.FalsePositivePerCapitaIncidence > 0)
 					{
@@ -2985,7 +2979,7 @@ int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned cha
 							}
 						}
 					}
-					InfectSweep(t, run, state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, Places, AdUnits);  // loops over all infectious people and decides which susceptible people to infect (at household, place and spatial level), and adds them to queue. Then changes each person's various characteristics using DoInfect function.  adding run number as a parameter to infect sweep so we can track run number: ggilani - 15/10/14
+					InfectSweep(t, run, state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, Places, AdUnits, InfEventLog);  // loops over all infectious people and decides which susceptible people to infect (at household, place and spatial level), and adds them to queue. Then changes each person's various characteristics using DoInfect function.  adding run number as a parameter to infect sweep so we can track run number: ggilani - 15/10/14
 					//// IncubRecoverySweep loops over all infecteds (either latent or infectious). If t is the right time, latent people moved to being infected, and infectious people moved to being clinical cases. Possibly also add them to recoveries or deaths. Add them to hospitalisation & hospitalisation discharge queues.
 					if (!P.DoSI) IncubRecoverySweep(t, run, state, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, Places, AdUnits);
 					// If doing new contact tracing, update numbers of people under contact tracing after each time step
@@ -3016,7 +3010,7 @@ int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned cha
 			}
 		}
 	}
-	if (!InterruptRun) RecordSample(t, P.NumSamples - 1, bmh, bmf, bmPixels, state, P, Hosts, Households, State, StateT, CellLookup, Mcells, Places, AdUnits);
+	if (!InterruptRun) RecordSample(t, P.NumSamples - 1, bmh, bmf, bmPixels, state, P, Hosts, Households, State, StateT, CellLookup, Mcells, Places, AdUnits, result);
 	fprintf(stderr, "\nEnd of run\n");
 	t2 = t + P.SampleTime;
 
@@ -3033,7 +3027,7 @@ int RunModel(int run, bitmap_header const* bmh, unsigned char* bmf, unsigned cha
 			TravelReturnSweep(t2, P, Hosts, Places);
 	}
 
-	if(!InterruptRun) RecordInfTypes(P, Hosts, Households, Cells, Mcells);
+	if(!InterruptRun) RecordInfTypes(P, Hosts, Households, Cells, Mcells, result);
 	return (InterruptRun);
 }
 
@@ -3150,7 +3144,7 @@ void SaveOriginDestMatrix(param const& P, adminunit const* AdUnits)
 	fclose(dat);
 }
 
-void SaveResults(param const& P, person const* Hosts, popvar const& State, adminunit const* AdUnits)
+void SaveResults(param const& P, person const* Hosts, popvar const& State, adminunit const* AdUnits, results const* TimeSeries)
 {
 	int i, j;
 	FILE* dat;
@@ -3424,12 +3418,14 @@ void SaveResults(param const& P, person const* Hosts, popvar const& State, admin
 	}
 }
 
-void SaveSummaryResults(param const& P, adminunit const* AdUnits) //// calculates and saves summary results (called for average of extinct and non-extinct realisation time series - look in main)
+void SaveSummaryResults(param const& P, adminunit const* AdUnits, result_collection const* result) //// calculates and saves summary results (called for average of extinct and non-extinct realisation time series - look in main)
 {
 	int i, j;
 	double c, t;
 	FILE* dat;
 	char outname[1024];
+	results const* const TSMean = result->TSMean;
+	results const* const TSVar = result->TSVar;
 
 	c = 1 / ((double)(P.NRactE + P.NRactNE));
 
@@ -3921,7 +3917,7 @@ void SaveRandomSeeds(param const& P)
 	fclose(dat);
 }
 
-void SaveEvents(void)
+void SaveEvents(events const * InfEventLog)
 {
 	/* function: SaveEvents(void)
 	 *
@@ -4263,7 +4259,7 @@ void UpdateEfficaciesAndComplianceProportions(double t, param& P)
 		}
 }
 
-void RecordSample(double t, int n, bitmap_header const* bmh, unsigned char const * bmf, unsigned char *bmPixels, bitmap_state const* state, param& P, person const* Hosts, household const* Households, popvar& State, popvar* StateT, cell** CellLookup, microcell const* Mcells, place** Places, adminunit* AdUnits)
+void RecordSample(double t, int n, bitmap_header const* bmh, unsigned char const * bmf, unsigned char *bmPixels, bitmap_state const* state, param& P, person const* Hosts, household const* Households, popvar& State, popvar* StateT, cell** CellLookup, microcell const* Mcells, place** Places, adminunit* AdUnits, result_collection* result)
 {
 	int i, j, k, S, L, I, R, D, N, cumC, cumTC, cumI, cumR, cumD, cumDC, cumFC;
 	int cumH; //add number of hospitalised, cumulative hospitalisation: ggilani 28/10/14
@@ -4275,6 +4271,7 @@ void RecordSample(double t, int n, bitmap_header const* bmh, unsigned char const
 	cell* ct;
 	unsigned short int ts;
 	double s,thr;
+	results* const TimeSeries = result->TimeSeries;
 
 	//// Severity quantities
 	int Mild, ILI, SARI, Critical, CritRecov, cumMild, cumILI, cumSARI, cumCritical, cumCritRecov, cumDeath_ILI, cumDeath_SARI, cumDeath_Critical;
@@ -4850,16 +4847,19 @@ void RecordSample(double t, int n, bitmap_header const* bmh, unsigned char const
 
 	if (P.OutputBitmap >= 1)
 	{
-		TSMean = TSMeanNE; TSVar = TSVarNE;
+		result->TSMean = result->TSMeanNE; result->TSVar = result->TSVarNE;
 		CaptureBitmap	(bmPixels, state, P, Hosts, Households, Mcells, AdUnits);
 		OutputBitmap	(0, bmh, bmf, P);
 	}
 }
 
-void RecordInfTypes(param& P, person* Hosts, household const* Households, cell const* Cells, microcell const* Mcells)
+void RecordInfTypes(param& P, person* Hosts, household const* Households, cell const* Cells, microcell const* Mcells, result_collection* result)
 {
 	int i, j, k, l, lc, lc2, b, c, n, nf, i2;
 	double* res, * res_av, * res_var, t, s;
+	results *const TimeSeries = result->TimeSeries;
+	results *const TSVar = result->TSVar;
+	results* const TSMean = result->TSMean;
 
 	for (n = 0; n < P.NumSamples; n++)
 	{
@@ -4977,11 +4977,11 @@ void RecordInfTypes(param& P, person* Hosts, household const* Households, cell c
 	fprintf(stderr, "extinct=%i (%i)\n", (int) TimeSeries[P.NumSamples - 1].extinct, P.NumSamples - 1);
 	if (TimeSeries[P.NumSamples - 1].extinct)
 	{
-		TSMean = TSMeanE; TSVar = TSVarE; P.NRactE++;
+		result->TSMean = result->TSMeanE; result->TSVar = result->TSVarE; P.NRactE++;
 	}
 	else
 	{
-		TSMean = TSMeanNE; TSVar = TSVarNE; P.NRactNE++;
+		result->TSMean = result->TSMeanNE; result->TSVar = result->TSVarNE; P.NRactNE++;
 	}
 	lc = -k;
 	for (n = 0; n < P.NumSamples; n++)
