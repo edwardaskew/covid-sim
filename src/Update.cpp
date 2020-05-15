@@ -11,7 +11,7 @@
 #include "Rand.h"
 
 //adding function to record an event: ggilani - 10/10/2014
-void RecordEvent(double, int, int, int, int, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, events* InfEventLog); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
+void RecordEvent(double, int, int, int, int, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, events* InfEventLog, int& nEvents); //added int as argument to InfectSweep to record run number: ggilani - 15/10/14
 
 unsigned short int ChooseFromICDF(double const *, double, int, param const& P);
 int ChooseFinalDiseaseSeverity(int, int, param const& P);
@@ -68,7 +68,7 @@ void DoImmune(int ai, bitmap_state const* state, param const& P, person* Hosts, 
 		}
 	}
 }
-void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits, events * InfEventLog) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
+void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, param const& P, person* Hosts, household const* Households, popvar& State, popvar* StateT, cell* Cells, microcell* Mcells, place** Places, adminunit* AdUnits, events * InfEventLog, int& nEvents) // Change person from susceptible to latently infected.  added int as argument to DoInfect to record run number: ggilani - 15/10/14
 {
 	///// This updates a number of things concerning person ai (and their contacts/infectors/places etc.) at time t in thread tn for this run.
 	int i;
@@ -142,9 +142,9 @@ void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, para
 		//added this to record event if flag is set to 1 : ggilani - 10/10/2014
 		if (P.DoRecordInfEvents)
 		{
-			if (*nEvents < P.MaxInfEvents)
+			if (nEvents < P.MaxInfEvents)
 			{
-				RecordEvent(t, ai, run, 0, tn, P, Hosts, Households, Mcells, InfEventLog); //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
+				RecordEvent(t, ai, run, 0, tn, P, Hosts, Households, Mcells, InfEventLog, nEvents); //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
 			}
 		}
 		if ((t > 0) && (P.DoOneGen))
@@ -156,7 +156,7 @@ void DoInfect(int ai, double t, int tn, int run, bitmap_state const* state, para
 	}
 }
 
-void RecordEvent(double t, int ai, int run, int type, int tn, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, events* InfEventLog) //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
+void RecordEvent(double t, int ai, int run, int type, int tn, param const& P, person const* Hosts, household const* Households, microcell const* Mcells, events* InfEventLog, int& nEvents) //added int as argument to RecordEvent to record run number: ggilani - 15/10/14
 {
 	/* Function: RecordEvent(t, ai)
 	 * Records an infection event in the event log
@@ -178,41 +178,41 @@ void RecordEvent(double t, int ai, int run, int type, int tn, param const& P, pe
 	//Save information to event
 #pragma omp critical (inf_event)
 	{
-		InfEventLog[*nEvents].run = run;
-		InfEventLog[*nEvents].type = type;
-		InfEventLog[*nEvents].t = t;
-		InfEventLog[*nEvents].infectee_ind = ai;
-		InfEventLog[*nEvents].infectee_adunit = Mcells[Hosts[ai].mcell].adunit;
-		InfEventLog[*nEvents].infectee_x = Households[Hosts[ai].hh].loc_x + P.SpatialBoundingBox[0];
-		InfEventLog[*nEvents].infectee_y = Households[Hosts[ai].hh].loc_y + P.SpatialBoundingBox[1];
-		InfEventLog[*nEvents].listpos = Hosts[ai].listpos;
-		InfEventLog[*nEvents].infectee_cell = Hosts[ai].pcell;
-		InfEventLog[*nEvents].thread = tn;
+		InfEventLog[nEvents].run = run;
+		InfEventLog[nEvents].type = type;
+		InfEventLog[nEvents].t = t;
+		InfEventLog[nEvents].infectee_ind = ai;
+		InfEventLog[nEvents].infectee_adunit = Mcells[Hosts[ai].mcell].adunit;
+		InfEventLog[nEvents].infectee_x = Households[Hosts[ai].hh].loc_x + P.SpatialBoundingBox[0];
+		InfEventLog[nEvents].infectee_y = Households[Hosts[ai].hh].loc_y + P.SpatialBoundingBox[1];
+		InfEventLog[nEvents].listpos = Hosts[ai].listpos;
+		InfEventLog[nEvents].infectee_cell = Hosts[ai].pcell;
+		InfEventLog[nEvents].thread = tn;
 		if (type == 0) //infection event - record time of onset of infector and infector
 		{
-			InfEventLog[*nEvents].infector_ind = bi;
+			InfEventLog[nEvents].infector_ind = bi;
 			if (bi < 0)
 			{
-				InfEventLog[*nEvents].t_infector = -1;
-				InfEventLog[*nEvents].infector_cell = -1;
+				InfEventLog[nEvents].t_infector = -1;
+				InfEventLog[nEvents].infector_cell = -1;
 			}
 			else
 			{
-				InfEventLog[*nEvents].t_infector = (int)(Hosts[bi].infection_time / P.TimeStepsPerDay);
-				InfEventLog[*nEvents].infector_cell = Hosts[bi].pcell;
+				InfEventLog[nEvents].t_infector = (int)(Hosts[bi].infection_time / P.TimeStepsPerDay);
+				InfEventLog[nEvents].infector_cell = Hosts[bi].pcell;
 			}
 		}
 		else if (type == 1) //onset event - record infectee's onset time
 		{
-			InfEventLog[*nEvents].t_infector = (int)(Hosts[ai].infection_time / P.TimeStepsPerDay);
+			InfEventLog[nEvents].t_infector = (int)(Hosts[ai].infection_time / P.TimeStepsPerDay);
 		}
 		else if ((type == 2) || (type == 3)) //recovery or death event - record infectee's onset time
 		{
-			InfEventLog[*nEvents].t_infector = (int)(Hosts[ai].latent_time / P.TimeStepsPerDay);
+			InfEventLog[nEvents].t_infector = (int)(Hosts[ai].latent_time / P.TimeStepsPerDay);
 		}
 
 		//increment the index of the infection event
-		(*nEvents)++;
+		nEvents++;
 	}
 
 }

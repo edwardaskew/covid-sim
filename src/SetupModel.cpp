@@ -22,7 +22,7 @@ int netbuf[NUM_PLACE_TYPES * 1000000];
 
 
 ///// INITIALIZE / SET UP FUNCTIONS
-void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits, airport* Airports, events *& InfEventLog, result_collection* result)
+void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits, airport* Airports, events *& InfEventLog, result_collection* result, double* infcountry_av, double* infcountry_num, double indivR0_av[][MAX_GEN_REC], double* denom_household, double inf_household_av[][MAX_HOUSEHOLD_SIZE + 1], double* AgeDist, double case_household_av[][MAX_HOUSEHOLD_SIZE + 1], double& PeakHeightSum)
 {
 	int i, j, k, l, m, i1, i2, j2, l2, m2, tn; //added tn as variable for multi-threaded loops: 28/11/14
 	int age; //added age (group): ggilani 09/03/20
@@ -32,6 +32,8 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	FILE* dat;
 	results* const TSVar = result->TSVar;
 	results* const TSMean = result->TSMean;
+	static double AgeDist2[NUM_AGE_GROUPS];
+	static double PropPlaces[NUM_AGE_GROUPS * AGE_GROUP_WIDTH][NUM_PLACE_TYPES];
 
 	if (!(Xcg1 = (long*)malloc(MAX_NUM_THREADS * CACHE_LINE_SIZE * sizeof(long)))) ERR_CRITICAL("Unable to allocate ranf storage\n");
 	if (!(Xcg2 = (long*)malloc(MAX_NUM_THREADS * CACHE_LINE_SIZE * sizeof(long)))) ERR_CRITICAL("Unable to allocate ranf storage\n");
@@ -195,7 +197,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Coords xmcell=%lg m   ymcell = %lg m\n", sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2 + P.mcwidth, P.height / 2, P)), sqrt(dist2_raw(P.width / 2, P.height / 2, P.width / 2, P.height / 2 + P.mcheight, P)));
 	t2 = 0.0;
 
-	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits);
+	SetupPopulation(DensityFile, SchoolFile, RegDemogFile, P, Hosts, Households, State, StateT, Cells, CellLookup, Mcells, McellLookup, Places, AdUnits, denom_household, AgeDist, AgeDist2, PropPlaces);
 
 	///// This loops over index l twice just to reset the pointer TSMean from TSMeanE to TSMeanNE (same for TSVar).
 	for (l = 0; l < 2; l++)
@@ -261,10 +263,9 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	if (P.DoRecordInfEvents)
 	{
 		if (!(InfEventLog = (events*)calloc(P.MaxInfEvents, sizeof(events)))) ERR_CRITICAL("Unable to allocate events storage\n");
-		if (!(nEvents = (int*)calloc(1, sizeof(int)))) ERR_CRITICAL("Unable to allocate events storage\n");
 	}
 
-	if(P.OutputNonSeverity) SaveAgeDistrib(P, State);
+	if(P.OutputNonSeverity) SaveAgeDistrib(P, State, AgeDist, AgeDist2);
 
 	fprintf(stderr, "Initialising places...\n");
 	if (P.DoPlaces)
@@ -272,7 +273,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		if (P.LoadSaveNetwork == 1)
 			LoadPeopleToPlaces(NetworkFile, P, Hosts);
 		else
-			AssignPeopleToPlaces(P, Hosts, Households, Cells, CellLookup, Mcells, Places);
+			AssignPeopleToPlaces(P, Hosts, Households, Cells, CellLookup, Mcells, Places, PropPlaces);
 	}
 
 
@@ -563,7 +564,6 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "LocalBeta = %lg\n", P.LocalBeta);
 	result->TSMean = result->TSMeanNE; result->TSVar = result->TSVarNE;
 	fprintf(stderr, "Calculated approx cell probabilities\n");
-	for (i = 0; i < INFECT_TYPE_MASK; i++) inftype_av[i] = 0;
 	for (i = 0; i < MAX_COUNTRIES; i++) infcountry_av[i] = infcountry_num[i] = 0;
 	for (i = 0; i < MAX_SEC_REC; i++)
 		for (j = 0; j < MAX_GEN_REC; j++)
@@ -571,7 +571,6 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	for (i = 0; i <= MAX_HOUSEHOLD_SIZE; i++)
 		for (j = 0; j <= MAX_HOUSEHOLD_SIZE; j++)
 			inf_household_av[i][j] = case_household_av[i][j] = 0;
-	DoInitUpdateProbs = 1;
 	for (i = 0; i < P.NC; i++)	Cells[i].tot_treat = 1;  //This makes sure InitModel intialises the cells.
 	P.NRactE = P.NRactNE = 0;
 	for (i = 0; i < P.PopSize; i++) Hosts[i].esocdist_comply = (ranf() < P.EnhancedSocDistProportionCompliant[HOST_AGE_GROUP(i)]) ? 1 : 0;
@@ -629,7 +628,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 		}
 		fprintf(stderr, "Configured mass vaccination queue.\n");
 	}
-	PeakHeightSum = PeakHeightSS = PeakTimeSum = PeakTimeSS = 0;
+	
 	i = (P.ncw / 2) * P.nch + P.nch / 2;
 	j = (P.ncw / 2 + 2) * P.nch + P.nch / 2;
 	fprintf(stderr, "UTM dist horiz=%lg %lg\n", sqrt(dist2_cc(Cells + i, Cells + j, P, Cells)), sqrt(dist2_cc(Cells + j, Cells + i, P, Cells)));
@@ -646,7 +645,7 @@ void SetupModel(char* DensityFile, char* NetworkFile, char* SchoolFile, char* Re
 	fprintf(stderr, "Model configuration complete.\n");
 }
 
-void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits)
+void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, param& P, person *& Hosts, household *& Households, popvar& State, popvar* StateT, cell *& Cells, cell**& CellLookup, microcell *& Mcells, microcell **& McellLookup, place **& Places, adminunit* AdUnits, double* denom_household, double* AgeDist, double* AgeDist2, double PropPlaces[][NUM_PLACE_TYPES])
 {
 	int i, j, k, l, m, i2, j2, last_i, mr, ad, tn, *mcl, country;
 	unsigned int rn, rn2;
@@ -657,6 +656,7 @@ void SetupPopulation(char* DensityFile, char* SchoolFile, char* RegDemogFile, pa
 	bin_file rec;
 	double *mcell_dens;
 	int *mcell_adunits, *mcell_num, *mcell_country;
+	static double PropPlacesC[NUM_AGE_GROUPS * AGE_GROUP_WIDTH][NUM_PLACE_TYPES];
 
 	if (!(Cells = (cell*)calloc(P.NC, sizeof(cell)))) ERR_CRITICAL("Unable to allocate cell storage\n");
 	if (!(Mcells = (microcell*)calloc(P.NMC, sizeof(microcell)))) ERR_CRITICAL("Unable to allocate cell storage\n");
@@ -1790,7 +1790,7 @@ void AssignHouseholdAges(int n, int pers, int tn, param const& P, person* Hosts,
 	for (i = 0; i < n; i++) Hosts[pers + i].age = (unsigned char) a[i];
 }
 
-void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells, place** Places)
+void AssignPeopleToPlaces(param& P, person* Hosts, household const* Households, cell* Cells, cell** CellLookup, microcell const * Mcells, place** Places, double PropPlaces[][NUM_PLACE_TYPES])
 {
 	int i, i2, j, j2, k, k2, l, m, m2, tp, f, f2, f3, f4, ic, mx, my, a, cnt, tn, ca, nt, nn;
 	int* PeopleArray;
@@ -2500,7 +2500,7 @@ void SavePeopleToPlaces(char* NetworkFile, param const& P, person const* Hosts)
 	fclose(dat);
 }
 
-void SaveAgeDistrib(param const& P, popvar const& State)
+void SaveAgeDistrib(param const& P, popvar const& State, double const* AgeDist, double* AgeDist2)
 {
 	int i;
 	FILE* dat;
