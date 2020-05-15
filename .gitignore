@@ -1,0 +1,17 @@
+
+*~
+*.xls
+x64
+.vs
+*.opendb
+*.swp
+*.gdb_history
+*.bin
+wpop_*.txt
+out/
+build
+build-*/
+build_*/
+.project
+*.vcxproj.user
+tests/*-output/
